@@ -237,3 +237,110 @@ you may set the following environment variables to configure the two servers
  * `PENPOT_MCP_SERVER_ADDRESS=<your-address>`: This sets the hostname or IP address
    where the MCP server can be reached. The Penpot MCP Plugin uses this to construct
    the WebSocket URL as `ws://<your-address>:<port>` (default port: `4402`).
+
+## Docker Deployment
+
+The Penpot MCP server can be run as a Docker service for easy deployment and containerization.
+The docker-compose configuration also includes the full Penpot application stack for local development.
+
+### Quick Start with Docker
+
+Build the docker image:
+```bash
+docker compose build --no-cache
+```
+
+Run the MCP server only:
+```bash
+docker compose up -d
+```
+
+This starts:
+- **Plugin Server** on port `4400`
+- **MCP HTTP/SSE endpoint** on port `4401`
+- **WebSocket bridge** on port `4402`
+- **REPL server** on port `4403`
+
+### Running with Full Penpot Stack
+
+To run both the MCP server and the complete Penpot application locally:
+
+```bash
+docker compose --profile penpot up -d
+```
+
+This starts the MCP server plus all Penpot services:
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Penpot UI | http://localhost:9001 | Penpot design application |
+| MCP Plugin Server | http://localhost:4400 | Plugin static assets |
+| MCP HTTP/SSE | http://localhost:4401 | MCP endpoint for AI clients |
+| MCP WebSocket | ws://localhost:4402 | Plugin bridge connection |
+| Mailcatcher UI | http://localhost:1080 | Development email viewer |
+
+> [!IMPORTANT]
+> Before exposing Penpot to the internet, generate a secure secret key:
+> ```bash
+> python3 -c "import secrets; print(secrets.token_urlsafe(64))"
+> ```
+> Update the `PENPOT_SECRET_KEY` value in `docker-compose.yml` with the generated key.
+
+### Deployment Options
+
+| Profile | Command | Description |
+|---------|---------|-------------|
+| Default | `docker compose up` | MCP server only (all-in-one container) |
+| Penpot | `docker compose --profile penpot up` | MCP + full Penpot stack |
+| Production | `docker compose --profile production up` | Separate MCP and Plugin containers |
+| Penpot + Production | `docker compose --profile penpot --profile production up` | Full Penpot + production MCP setup |
+| Multi-user | `docker compose --profile multi-user up` | MCP + Plugin with multi-user support |
+| Penpot + Multi-user | `docker compose --profile penpot --profile multi-user up` | Full Penpot + multi-user MCP |
+
+### Penpot Version
+
+By default, the latest Penpot version is used. To specify a particular version:
+
+```bash
+PENPOT_VERSION=2.4 docker compose --profile penpot up -d
+```
+
+Or add to your `.env` file:
+
+```env
+PENPOT_VERSION=2.4
+```
+
+### Custom Server Address
+
+When deploying to a remote server, set the external address:
+
+```bash
+PENPOT_MCP_SERVER_ADDRESS=mcp.example.com docker compose up -d
+```
+
+Or create a `.env` file:
+
+```env
+PENPOT_MCP_SERVER_ADDRESS=mcp.example.com
+```
+
+### Building Individual Images
+
+```bash
+# MCP Server only
+docker build --target mcp-server -t penpot-mcp-server .
+
+# Plugin Server only
+docker build --target plugin-server -t penpot-mcp-plugin .
+
+# All-in-one
+docker build --target all-in-one -t penpot-mcp .
+```
+
+> [!NOTE]
+> When running in Docker (remote mode), file system access is disabled by default.
+> This means import/export tools that read/write local files will not be available.
+
+For comprehensive Docker documentation including health checks, troubleshooting, 
+and nginx reverse proxy configuration, see [docs/docker.md](docs/docker.md).

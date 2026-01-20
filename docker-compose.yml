@@ -1,0 +1,403 @@
+# =============================================================================
+# Penpot MCP Server - Docker Compose Configuration
+# =============================================================================
+# 
+# Usage:
+#   Development (all-in-one MCP only):
+#     docker compose up
+#
+#   Production (separate services):
+#     docker compose --profile production up
+#
+#   Multi-user mode:
+#     docker compose --profile multi-user up
+#
+#   Full Penpot stack with MCP:
+#     docker compose --profile penpot up
+#
+#   Full Penpot stack with production MCP:
+#     docker compose --profile penpot --profile production up
+#
+# =============================================================================
+
+# =============================================================================
+# Penpot Configuration Anchors
+# =============================================================================
+## Common flags:
+# demo-users
+# email-verification
+# log-emails
+# log-invitation-tokens
+# login-with-github
+# login-with-gitlab
+# login-with-google
+# login-with-ldap
+# login-with-oidc
+# login-with-password
+# prepl-server
+# registration
+# secure-session-cookies
+# smtp
+# smtp-debug
+# telemetry
+# webhooks
+##
+## You can read more about all available flags and other
+## environment variables here:
+## https://help.penpot.app/technical-guide/configuration/#penpot-configuration
+#
+# WARNING: if you're exposing Penpot to the internet, you should remove the flags
+# 'disable-secure-session-cookies' and 'disable-email-verification'
+x-flags: &penpot-flags
+  PENPOT_FLAGS: disable-email-verification enable-smtp enable-prepl-server disable-secure-session-cookies
+
+x-uri: &penpot-public-uri
+  PENPOT_PUBLIC_URI: http://localhost:9001
+
+x-body-size: &penpot-http-body-size
+  # Max body size (30MiB); Used for plain requests, should never be
+  # greater than multi-part size
+  PENPOT_HTTP_SERVER_MAX_BODY_SIZE: 31457280
+
+  # Max multipart body size (350MiB)
+  PENPOT_HTTP_SERVER_MAX_MULTIPART_BODY_SIZE: 367001600
+
+## Penpot SECRET KEY. It serves as a master key from which other keys for subsystems
+## (eg http sessions, or invitations) are derived.
+##
+## We recommend to use a trully randomly generated
+## 512 bits base64 encoded string here. You can generate one with:
+##
+## python3 -c "import secrets; print(secrets.token_urlsafe(64))"
+x-secret-key: &penpot-secret-key
+  PENPOT_SECRET_KEY: change-this-insecure-key
+
+services:
+  # ---------------------------------------------------------------------------
+  # All-in-One Service (Default)
+  # Runs both MCP server and Plugin server in a single container
+  # Good for simple deployments and testing
+  # ---------------------------------------------------------------------------
+  penpot-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: all-in-one
+      args:
+        MULTI_USER_MODE: "false"
+    container_name: penpot-mcp
+    ports:
+      - "4400:4400"  # Plugin server
+      - "4401:4401"  # MCP HTTP/SSE endpoint
+      - "4402:4402"  # WebSocket for plugin bridge
+      - "4403:4403"  # REPL server
+    environment:
+      - NODE_ENV=production
+      - PENPOT_MCP_SERVER_PORT=4401
+      - PENPOT_MCP_WEBSOCKET_PORT=4402
+      - PENPOT_MCP_REPL_PORT=4403
+      - PENPOT_MCP_SERVER_LISTEN_ADDRESS=0.0.0.0
+      - PENPOT_MCP_SERVER_ADDRESS=${PENPOT_MCP_SERVER_ADDRESS:-localhost}
+      - PENPOT_MCP_REMOTE_MODE=true
+      - MCP_SERVER_ARGS=
+    networks:
+      - default
+      - penpot
+    restart: unless-stopped
+    # Health check uses plugin server since MCP uses streaming endpoints
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4400/manifest.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # MCP Server Only (Production Profile)
+  # Runs just the MCP server - use with separate plugin server or external plugin
+  # ---------------------------------------------------------------------------
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: mcp-server
+    container_name: penpot-mcp-server
+    profiles:
+      - production
+      - multi-user
+    ports:
+      - "4401:4401"  # MCP HTTP/SSE endpoint
+      - "4402:4402"  # WebSocket for plugin bridge
+      - "4403:4403"  # REPL server
+    environment:
+      - NODE_ENV=production
+      - PENPOT_MCP_SERVER_PORT=4401
+      - PENPOT_MCP_WEBSOCKET_PORT=4402
+      - PENPOT_MCP_REPL_PORT=4403
+      - PENPOT_MCP_SERVER_LISTEN_ADDRESS=0.0.0.0
+      - PENPOT_MCP_SERVER_ADDRESS=${PENPOT_MCP_SERVER_ADDRESS:-localhost}
+      - PENPOT_MCP_REMOTE_MODE=true
+    restart: unless-stopped
+    # Health check disabled - MCP uses streaming endpoints
+    healthcheck:
+      disable: true
+
+  # ---------------------------------------------------------------------------
+  # Plugin Server Only (Production Profile)
+  # Serves the Penpot plugin static assets
+  # ---------------------------------------------------------------------------
+  plugin-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: plugin-server
+      args:
+        MULTI_USER_MODE: "true"
+    container_name: penpot-mcp-plugin
+    profiles:
+      - production
+      - multi-user
+    ports:
+      - "4400:4400"  # Plugin server
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4400/manifest.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # Multi-User MCP Server (Multi-User Profile)
+  # MCP server with multi-user authentication enabled
+  # ---------------------------------------------------------------------------
+  mcp-server-multi-user:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: mcp-server
+    container_name: penpot-mcp-server-multi-user
+    profiles:
+      - multi-user-only
+    ports:
+      - "4401:4401"
+      - "4402:4402"
+      - "4403:4403"
+    environment:
+      - NODE_ENV=production
+      - PENPOT_MCP_SERVER_PORT=4401
+      - PENPOT_MCP_WEBSOCKET_PORT=4402
+      - PENPOT_MCP_REPL_PORT=4403
+      - PENPOT_MCP_SERVER_LISTEN_ADDRESS=0.0.0.0
+      - PENPOT_MCP_SERVER_ADDRESS=${PENPOT_MCP_SERVER_ADDRESS:-localhost}
+      - PENPOT_MCP_REMOTE_MODE=true
+    command: ["node", "mcp-server/dist/index.js", "--multi-user"]
+    restart: unless-stopped
+    # Health check disabled - MCP uses streaming endpoints
+    healthcheck:
+      disable: true
+
+  # ===========================================================================
+  # Penpot Application Services (penpot profile)
+  # ===========================================================================
+  # These services run the full Penpot application stack
+  # Use: docker compose --profile penpot up
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # Penpot Frontend
+  # ---------------------------------------------------------------------------
+  penpot-frontend:
+    image: "penpotapp/frontend:${PENPOT_VERSION:-latest}"
+    restart: always
+    profiles:
+      - penpot
+    ports:
+      - 9001:8080
+    volumes:
+      - penpot_assets:/opt/data/assets
+    depends_on:
+      - penpot-backend
+      - penpot-exporter
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-flags, *penpot-http-body-size]
+
+  # ---------------------------------------------------------------------------
+  # Penpot Backend
+  # ---------------------------------------------------------------------------
+  penpot-backend:
+    image: "penpotapp/backend:${PENPOT_VERSION:-latest}"
+    restart: always
+    profiles:
+      - penpot
+    volumes:
+      - penpot_assets:/opt/data/assets
+    depends_on:
+      penpot-postgres:
+        condition: service_healthy
+      penpot-valkey:
+        condition: service_healthy
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-flags, *penpot-public-uri, *penpot-http-body-size, *penpot-secret-key]
+
+      ## The PREPL host. Mainly used for external programatic access to penpot backend
+      ## (example: admin). By default it will listen on `localhost` but if you are going to use
+      ## the `admin`, you will need to uncomment this and set the host to `0.0.0.0`.
+
+      # PENPOT_PREPL_HOST: 0.0.0.0
+
+      ## Database connection parameters. Don't touch them unless you are using custom
+      ## postgresql connection parameters.
+
+      PENPOT_DATABASE_URI: postgresql://penpot-postgres/penpot
+      PENPOT_DATABASE_USERNAME: penpot
+      PENPOT_DATABASE_PASSWORD: penpot
+
+      ## Valkey (or previously redis) is used for the websockets notifications. Don't touch
+      ## unless the valkey container has different parameters or different name.
+
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+
+      ## Default configuration for assets storage: using filesystem based with all files
+      ## stored in a docker volume.
+
+      PENPOT_ASSETS_STORAGE_BACKEND: assets-fs
+      PENPOT_STORAGE_ASSETS_FS_DIRECTORY: /opt/data/assets
+
+      ## Also can be configured to to use a S3 compatible storage.
+
+      # AWS_ACCESS_KEY_ID: <KEY_ID>
+      # AWS_SECRET_ACCESS_KEY: <ACCESS_KEY>
+      # PENPOT_ASSETS_STORAGE_BACKEND: assets-s3
+      # PENPOT_STORAGE_ASSETS_S3_ENDPOINT: <ENDPOINT>
+      # PENPOT_STORAGE_ASSETS_S3_BUCKET: <BUKET_NAME>
+
+      ## Telemetry. When enabled, a periodical process will send anonymous data about this
+      ## instance. Telemetry data will enable us to learn how the application is used,
+      ## based on real scenarios. If you want to help us, please leave it enabled. You can
+      ## audit what data we send with the code available on github.
+
+      PENPOT_TELEMETRY_ENABLED: true
+      PENPOT_TELEMETRY_REFERER: compose
+
+      ## Example SMTP/Email configuration. By default, emails are sent to the mailcatch
+      ## service, but for production usage it is recommended to setup a real SMTP
+      ## provider. Emails are used to confirm user registrations & invitations. Look below
+      ## how the mailcatch service is configured.
+
+      PENPOT_SMTP_DEFAULT_FROM: no-reply@example.com
+      PENPOT_SMTP_DEFAULT_REPLY_TO: no-reply@example.com
+      PENPOT_SMTP_HOST: penpot-mailcatch
+      PENPOT_SMTP_PORT: 1025
+      PENPOT_SMTP_USERNAME:
+      PENPOT_SMTP_PASSWORD:
+      PENPOT_SMTP_TLS: false
+      PENPOT_SMTP_SSL: false
+
+  # ---------------------------------------------------------------------------
+  # Penpot Exporter
+  # ---------------------------------------------------------------------------
+  penpot-exporter:
+    image: "penpotapp/exporter:${PENPOT_VERSION:-latest}"
+    restart: always
+    profiles:
+      - penpot
+    depends_on:
+      penpot-valkey:
+        condition: service_healthy
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-secret-key]
+      # Don't touch it; this uses an internal docker network to
+      # communicate with the frontend.
+      PENPOT_PUBLIC_URI: http://penpot-frontend:8080
+
+      ## Valkey (or previously Redis) is used for the websockets notifications.
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+
+  # ---------------------------------------------------------------------------
+  # Penpot PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  penpot-postgres:
+    image: "postgres:15"
+    restart: always
+    stop_signal: SIGINT
+    profiles:
+      - penpot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penpot"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+      start_period: 2s
+    volumes:
+      - penpot_postgres_v15:/var/lib/postgresql/data
+    networks:
+      - penpot
+    environment:
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      - POSTGRES_DB=penpot
+      - POSTGRES_USER=penpot
+      - POSTGRES_PASSWORD=penpot
+
+  # ---------------------------------------------------------------------------
+  # Penpot Valkey (Redis-compatible cache)
+  # ---------------------------------------------------------------------------
+  penpot-valkey:
+    image: valkey/valkey:8.1
+    restart: always
+    profiles:
+      - penpot
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - penpot
+    environment:
+      # You can increase the max memory size if you have sufficient resources,
+      # although this should not be necessary.
+      - VALKEY_EXTRA_FLAGS=--maxmemory 128mb --maxmemory-policy volatile-lfu
+
+  # ---------------------------------------------------------------------------
+  # Penpot Mailcatch (Development SMTP)
+  # ---------------------------------------------------------------------------
+  ## A mailcatch service, used as temporal SMTP server. You can access via HTTP to the
+  ## port 1080 for read all emails the penpot platform has sent. Should be only used as a
+  ## temporal solution while no real SMTP provider is configured.
+  penpot-mailcatch:
+    image: sj26/mailcatcher:latest
+    restart: always
+    profiles:
+      - penpot
+    expose:
+      - '1025'
+    ports:
+      - "1080:1080"
+    networks:
+      - penpot
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  default:
+    name: penpot-mcp-network
+  penpot:
+    name: penpot-network
+
+# =============================================================================
+# Volumes (for Penpot data persistence)
+# =============================================================================
+volumes:
+  penpot_postgres_v15:
+  penpot_assets:

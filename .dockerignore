@@ -1,0 +1,73 @@
+# =============================================================================
+# Docker Ignore File for Penpot MCP
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Node modules (will be installed fresh in container)
+node_modules
+*/node_modules
+**/node_modules
+
+# Build outputs (will be built in container)
+dist
+*/dist
+**/dist
+
+# Development files
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.cursor
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+docs
+*.md
+!README.md
+
+# Test files
+*.test.ts
+*.spec.ts
+__tests__
+coverage
+
+# Python scripts (used for API doc generation)
+python-scripts
+
+# Samples
+samples
+
+# Serena configuration
+.serena
+
+# GitHub workflows
+.github
+
+# Lock files for other package managers
+yarn.lock
+pnpm-lock.yaml
+
+# Misc
+*.tgz
+*.tar.gz
+.prettierrc
+.prettierignore
+LICENSE
+CONTRIBUTING.md
+resources
