@@ -412,6 +412,172 @@ export class PenpotUtils {
     }
 
     /**
+     * Calculates the bounding box that encompasses all children of a container.
+     * Useful for determining if a container needs resizing to fit its content.
+     *
+     * @param container - The container shape to analyze
+     * @returns Bounds information including content dimensions and overflow
+     */
+    public static calculateContentBounds(container: Shape): {
+        contentX: number;
+        contentY: number;
+        contentWidth: number;
+        contentHeight: number;
+        overflowLeft: number;
+        overflowTop: number;
+        overflowRight: number;
+        overflowBottom: number;
+    } | null {
+        if (!("children" in container) || !container.children || container.children.length === 0) {
+            return null;
+        }
+
+        let minX = Infinity,
+            minY = Infinity;
+        let maxX = -Infinity,
+            maxY = -Infinity;
+
+        container.children.forEach((child) => {
+            minX = Math.min(minX, child.x);
+            minY = Math.min(minY, child.y);
+            maxX = Math.max(maxX, child.x + child.width);
+            maxY = Math.max(maxY, child.y + child.height);
+        });
+
+        return {
+            contentX: minX,
+            contentY: minY,
+            contentWidth: maxX - minX,
+            contentHeight: maxY - minY,
+            overflowLeft: Math.max(0, container.x - minX),
+            overflowTop: Math.max(0, container.y - minY),
+            overflowRight: Math.max(0, maxX - (container.x + container.width)),
+            overflowBottom: Math.max(0, maxY - (container.y + container.height)),
+        };
+    }
+
+    /**
+     * Resizes a container to fit its children with optional padding.
+     * The container will be repositioned and resized to contain all children.
+     *
+     * @param container - The container shape to resize
+     * @param options - Optional configuration for padding and minimum sizes
+     * @returns Object with old and new dimensions, or null if no children
+     */
+    public static fitToContent(
+        container: Shape,
+        options?: {
+            padding?: number;
+            minWidth?: number;
+            minHeight?: number;
+        }
+    ): { oldSize: { w: number; h: number }; newSize: { w: number; h: number } } | null {
+        const bounds = this.calculateContentBounds(container);
+        if (!bounds) return null;
+
+        const padding = options?.padding ?? 16;
+        const minWidth = options?.minWidth ?? 0;
+        const minHeight = options?.minHeight ?? 0;
+
+        const oldWidth = container.width;
+        const oldHeight = container.height;
+
+        const newWidth = Math.max(minWidth, bounds.contentWidth + padding * 2);
+        const newHeight = Math.max(minHeight, bounds.contentHeight + padding * 2);
+
+        container.x = bounds.contentX - padding;
+        container.y = bounds.contentY - padding;
+        container.resize(newWidth, newHeight);
+
+        return {
+            oldSize: { w: oldWidth, h: oldHeight },
+            newSize: { w: newWidth, h: newHeight },
+        };
+    }
+
+    /**
+     * Finds the nearest value in a spacing scale.
+     *
+     * @param value - The value to snap
+     * @param scale - The spacing scale array (default: [4, 8, 12, 16, 24, 32])
+     * @returns The nearest spacing scale value
+     */
+    public static nearestSpacing(value: number, scale: number[] = [4, 8, 12, 16, 24, 32]): number {
+        return scale.reduce((prev, curr) => (Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev));
+    }
+
+    /**
+     * Determines if a container would benefit from flex layout based on its children.
+     * Analyzes child positions and dimensions to suggest direction and alignment.
+     *
+     * @param container - The container to analyze
+     * @returns Suggested flex configuration with confidence score
+     */
+    public static suggestFlexConfig(container: Shape): {
+        direction: "row" | "column";
+        alignItems: "start" | "center" | "end";
+        justifyContent: "start" | "center" | "end" | "space-between";
+        gap: number;
+        confidence: number;
+    } | null {
+        if (!("children" in container) || !container.children || container.children.length < 2) {
+            return null;
+        }
+
+        const children = container.children;
+
+        // Calculate center points
+        const centers = children.map((child) => ({
+            x: child.x + child.width / 2,
+            y: child.y + child.height / 2,
+        }));
+
+        // Calculate variance to determine direction
+        const avgX = centers.reduce((sum, c) => sum + c.x, 0) / centers.length;
+        const avgY = centers.reduce((sum, c) => sum + c.y, 0) / centers.length;
+
+        const varianceX = centers.reduce((sum, c) => sum + Math.pow(c.x - avgX, 2), 0) / centers.length;
+        const varianceY = centers.reduce((sum, c) => sum + Math.pow(c.y - avgY, 2), 0) / centers.length;
+
+        const direction: "row" | "column" = varianceX > varianceY ? "row" : "column";
+        const confidence = Math.abs(varianceX - varianceY) / Math.max(varianceX, varianceY, 1);
+
+        // Calculate suggested gap
+        const sorted = [...children].sort((a, b) => (direction === "row" ? a.x - b.x : a.y - b.y));
+
+        let totalGap = 0;
+        for (let i = 0; i < sorted.length - 1; i++) {
+            const gap =
+                direction === "row"
+                    ? sorted[i + 1].x - (sorted[i].x + sorted[i].width)
+                    : sorted[i + 1].y - (sorted[i].y + sorted[i].height);
+            totalGap += Math.max(0, gap);
+        }
+        const avgGap = totalGap / (sorted.length - 1);
+        const gap = this.nearestSpacing(avgGap);
+
+        // Determine alignment
+        const alignItems: "start" | "center" | "end" =
+            confidence > 0.5
+                ? "center"
+                : direction === "row"
+                  ? avgY < container.y + container.height / 2
+                      ? "start"
+                      : "end"
+                  : avgX < container.x + container.width / 2
+                    ? "start"
+                    : "end";
+
+        return {
+            direction,
+            alignItems,
+            justifyContent: "start",
+            gap,
+            confidence: Math.min(1, confidence + 0.3),
+        };
+    }
+
+    /**
      * Decodes a base64 string to a Uint8Array.
      * This is required because the Penpot plugin environment does not provide the atob function.
      *

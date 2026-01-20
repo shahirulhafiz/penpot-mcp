@@ -4,12 +4,22 @@ description: Design quality assurance tools based on Penpot best practices
 enabled: true
 
 tools:
+  # Design Quality & Validation
   - ValidateDesignTool
   - DetectClippingTool
+  - FixClippingTool
   - FixSpacingTool
   - FixZOrderTool
   - AuditLayerNamesTool
   - ApplySpacingScaleTool
+  # Container & Layout
+  - AutoSizeContainerTool
+  - SuggestLayoutTool
+  - AnalyzeStructureTool
+  # Design-to-Code Handoff
+  - ExtractDesignSpecsTool
+  - GenerateCssVariablesTool
+  - GenerateComponentSpecTool
 
 requires:
   - core

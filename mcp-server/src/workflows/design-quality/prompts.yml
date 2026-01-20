@@ -211,15 +211,41 @@ workflow_instructions: |
   
   ### Recommended Workflow
   
+  #### For New Designs
+  
   1. **Plan** - Define hierarchy and spacing before creating
   2. **Structure** - Create containers with flex/grid layouts
   3. **Backgrounds First** - Add background elements BEFORE content (critical for z-order)
   4. **Content** - Add elements and group immediately
   5. **Name** - Use descriptive names as you create (especially 'BG' for backgrounds)
   6. **Validate** - Run `validate_design` to catch issues (includes z-order checks)
-  7. **Fix Z-Order** - If needed, run `fix_z_order` with `autoFix: true`
-  8. **Refine** - Use `fix_spacing`, `audit_layer_names` as needed
+  7. **Auto-Fix** - Run auto-fix tools in this order:
+     - `fix_z_order` with `autoFix: true` (z-order issues)
+     - `fix_clipping` with strategy `auto` (clipping issues)
+     - `fix_spacing` with `autoFix: true` (spacing issues)
+  8. **Refine** - Use `audit_layer_names`, `auto_size_container` as needed
   9. **Final Check** - Run `validate_design` one more time
+  
+  #### For Existing Designs
+  
+  1. **Analyze** - Run `analyze_structure` to understand the design
+  2. **Review Layout** - Run `suggest_layout` on key containers
+  3. **Validate** - Run `validate_design` to find all issues
+  4. **Fix** - Apply fixes using the tools (see Quick Fix Sequence below)
+  5. **Optimize** - Use `auto_size_container` to eliminate wasted space
+  
+  #### Quick Fix Sequence (One-Command Flow)
+  
+  When you have multiple issues, run these tools in order:
+  
+  ```
+  1. fix_z_order (autoFix: true)     → Ensure visibility
+  2. fix_clipping (strategy: auto)   → Ensure containment
+  3. auto_size_container (mode: fit) → Optimize container sizes
+  4. fix_spacing (autoFix: true)     → Standardize spacing
+  5. audit_layer_names (autoRename: true) → Clean up names
+  6. validate_design                  → Verify all fixed
+  ```
   
   ### Quality Checklist
   
@@ -243,6 +269,14 @@ workflow_instructions: |
   Focused tool for finding content overflow issues.
   Use when you specifically need to check containment.
   
+  ### fix_clipping ⭐ NEW
+  **Automatically fixes** clipping issues with multiple strategies:
+  - `expand-parent`: Resize parent to fit children (adds padding)
+  - `reposition-child`: Move children within parent bounds
+  - `apply-flex`: Add flex layout for automatic handling
+  - `auto`: Choose best strategy per issue (recommended)
+  Use `dryRun: true` to preview changes before applying.
+  
   ### fix_spacing
   Detects and optionally fixes non-standard spacing values.
   Use with `autoFix: true` to automatically snap to scale.
@@ -259,6 +293,57 @@ workflow_instructions: |
   Detects and fixes z-order issues where backgrounds cover content.
   Critical when creating designs programmatically (appendChild adds to front).
   Use with `autoFix: true` to automatically reorder elements by priority.
+  
+  ### auto_size_container ⭐ NEW
+  Automatically resizes containers to fit their content with configurable padding.
+  Modes:
+  - `fit`: Resize to exactly fit content (default)
+  - `fit-expand-only`: Only expand, never shrink
+  - `fit-shrink-only`: Only shrink, never expand
+  Great for fixing containers that are too small (clipping) or too large (wasted space).
+  
+  ### suggest_layout ⭐ NEW
+  Analyzes a container's children and suggests optimal flex/grid configuration.
+  Examines child positions, dimensions, and types to recommend:
+  - Direction (row or column)
+  - Alignment (start, center, end)
+  - Gap and padding values
+  Use `autoApply: true` to automatically configure the layout.
+  
+  ### analyze_structure ⭐ NEW
+  Analyzes the structure and hierarchy of a design:
+  - Detects ungrouped related elements
+  - Finds missing intermediate containers
+  - Identifies deep nesting (>5 levels)
+  - Shows hierarchy visualization
+  - Calculates health score
+  Run this when starting work on an existing design to understand its structure.
+  
+  ## Design-to-Code Handoff Tools
+  
+  ### extract_design_specs ⭐ NEW
+  Extracts detailed design specifications from any shape:
+  - Dimensions, positions, colors
+  - Typography settings
+  - Layout configuration (flex/grid)
+  - Border and shadow properties
+  Formats: JSON (structured), CSS (direct styling), Markdown (documentation)
+  
+  ### generate_css_variables ⭐ NEW
+  Generates CSS custom properties from a design:
+  - Extracts colors, dimensions, spacing, typography
+  - Creates :root CSS variables with semantic names
+  - Organizes by element or property type
+  Use for maintaining design-code consistency and design systems.
+  
+  ### generate_component_spec ⭐ NEW
+  Creates comprehensive component documentation:
+  - Component structure tree
+  - Color palette extraction
+  - Typography catalog
+  - State detection (hover, active, disabled, etc.)
+  - Implementation recommendations
+  Perfect for developer handoff documentation.
   
   ## Examples
   
