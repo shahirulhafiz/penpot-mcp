@@ -20,7 +20,7 @@ export class ValidateDesignTool extends Tool<{
             ),
             checks: z.array(z.string()).optional().describe(
                 'Optional array of check types to run. Available: "visual-consistency", "content-visibility", ' +
-                '"layer-organization", "layout-integrity", "accessibility". If not specified, runs all checks.'
+                '"layer-organization", "layout-integrity", "accessibility", "z-order". If not specified, runs all checks.'
             ),
         });
     }
@@ -46,7 +46,8 @@ export class ValidateDesignTool extends Tool<{
             "content-visibility",
             "layer-organization",
             "layout-integrity",
-            "accessibility"
+            "accessibility",
+            "z-order"
         ];
         const checksToRun = args.checks && args.checks.length > 0 ? args.checks : allChecks;
 
@@ -383,6 +384,119 @@ export class ValidateDesignTool extends Tool<{
                 results.checks["accessibility"] = {
                     passed: issues.length === 0,
                     issueCount: issues.length,
+                    issues
+                };
+                issues.forEach(i => results.summary[i.severity]++);
+                results.summary.total += issues.length;
+            }
+
+            // Z-ORDER CHECKS
+            if (checksToRun.includes("z-order")) {
+                const issues = [];
+
+                /**
+                 * Determines z-order priority for a shape.
+                 * Lower priority = should be at back (index 0)
+                 * Higher priority = should be at front (last index)
+                 */
+                const getZOrderPriority = (shape) => {
+                    const name = shape.name.toLowerCase();
+                    
+                    // Background elements - should be at back
+                    if (name.includes('bg') || 
+                        name.includes('background') || 
+                        name.includes('panel') ||
+                        name.includes('backdrop')) {
+                        return 0;
+                    }
+                    
+                    // Text elements - should be at front
+                    if (shape.type === 'text') {
+                        return 3;
+                    }
+                    
+                    // Cards, buttons, badges - should be above basic shapes
+                    if (shape.type === 'rectangle') {
+                        const name = shape.name.toLowerCase();
+                        if (name.includes('card') || 
+                            name.includes('button') ||
+                            name.includes('badge') ||
+                            name.includes('progress')) {
+                            return 2;
+                        }
+                        return 1;
+                    }
+                    
+                    return 2;
+                };
+
+                // Find containers with potential z-order issues
+                const containers = penpotUtils.findShapes(
+                    shape => 'children' in shape && shape.children && shape.children.length > 1,
+                    targetShape
+                );
+
+                let totalZOrderIssues = 0;
+                const containersWithIssues = [];
+
+                containers.forEach(container => {
+                    const children = container.children;
+                    const childData = children.map((child, index) => ({
+                        id: child.id,
+                        name: child.name,
+                        type: child.type,
+                        currentIndex: index,
+                        priority: getZOrderPriority(child)
+                    }));
+
+                    // Check for backgrounds not at back
+                    const backgrounds = childData.filter(c => c.priority === 0);
+                    const nonBackgrounds = childData.filter(c => c.priority > 0);
+                    
+                    let containerIssues = 0;
+                    backgrounds.forEach(bg => {
+                        const coveredElements = nonBackgrounds.filter(nb => nb.currentIndex < bg.currentIndex);
+                        if (coveredElements.length > 0) {
+                            containerIssues++;
+                            totalZOrderIssues++;
+                        }
+                    });
+
+                    // Check for text behind other elements
+                    const textElements = childData.filter(c => c.priority === 3);
+                    textElements.forEach(text => {
+                        const elementsInFront = childData.filter(
+                            c => c.priority < 3 && c.currentIndex > text.currentIndex
+                        );
+                        if (elementsInFront.length > 0) {
+                            containerIssues++;
+                            totalZOrderIssues++;
+                        }
+                    });
+
+                    if (containerIssues > 0) {
+                        containersWithIssues.push({
+                            name: container.name,
+                            id: container.id,
+                            issues: containerIssues
+                        });
+                    }
+                });
+
+                if (totalZOrderIssues > 0) {
+                    issues.push({
+                        severity: "critical",
+                        category: "z-order-inversion",
+                        message: \`Found \${totalZOrderIssues} z-order issues where backgrounds may cover content or text is behind other elements\`,
+                        containers: containersWithIssues.slice(0, 10),
+                        suggestion: "Use fix_z_order tool with autoFix: true to automatically correct z-order"
+                    });
+                }
+
+                results.checks["z-order"] = {
+                    passed: issues.length === 0,
+                    issueCount: issues.length,
+                    containersAnalyzed: containers.length,
                     issues
                 };
                 issues.forEach(i => results.summary[i.severity]++);

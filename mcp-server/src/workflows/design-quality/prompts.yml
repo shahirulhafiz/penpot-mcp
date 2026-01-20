@@ -141,6 +141,24 @@ workflow_instructions: |
   3. Apply flex layout for automatic content handling
   4. Reduce child element size if appropriate
   
+  ### Issue: Z-Order Problems (Elements Not Visible)
+  
+  **Symptoms:** Text or content not rendering, elements appear missing, backgrounds covering content
+  
+  **Root Cause:** When using `appendChild()`, elements are added to the FRONT (highest index).
+  If a background panel is added LATER in the code (e.g., during refactoring), it covers everything.
+  
+  **Solutions:**
+  1. Run `fix_z_order` to detect z-order inversions
+  2. Use `fix_z_order` with `autoFix: true` to automatically reorder elements
+  3. Manual fix: `penpotUtils.fixZOrder(container)` to sort children by priority
+  4. Verify z-order after bulk element creation by exporting and inspecting visually
+  
+  **Prevention:**
+  - Add background elements FIRST when creating designs programmatically
+  - Use descriptive names for backgrounds (include 'BG', 'Background', 'Panel')
+  - Always run `validate_design` after creating elements to catch z-order issues
+  
   ### Issue: Inconsistent Spacing
   
   **Symptoms:** Uneven gaps, different spacing in similar components
@@ -195,16 +213,19 @@ workflow_instructions: |
   
   1. **Plan** - Define hierarchy and spacing before creating
   2. **Structure** - Create containers with flex/grid layouts
-  3. **Content** - Add elements and group immediately
-  4. **Name** - Use descriptive names as you create
-  5. **Validate** - Run `validate_design` to catch issues
-  6. **Refine** - Use `fix_spacing`, `audit_layer_names` as needed
-  7. **Final Check** - Run `validate_design` one more time
+  3. **Backgrounds First** - Add background elements BEFORE content (critical for z-order)
+  4. **Content** - Add elements and group immediately
+  5. **Name** - Use descriptive names as you create (especially 'BG' for backgrounds)
+  6. **Validate** - Run `validate_design` to catch issues (includes z-order checks)
+  7. **Fix Z-Order** - If needed, run `fix_z_order` with `autoFix: true`
+  8. **Refine** - Use `fix_spacing`, `audit_layer_names` as needed
+  9. **Final Check** - Run `validate_design` one more time
   
   ### Quality Checklist
   
   Before finalizing any design, ensure:
   - ✅ All elements are within parent bounds (no clipping)
+  - ✅ Z-order is correct (backgrounds at back, text at front)
   - ✅ Spacing uses standard scale values
   - ✅ All layers have descriptive names
   - ✅ Containers use flex/grid layouts (not manual positioning)
@@ -233,6 +254,11 @@ workflow_instructions: |
   ### apply_spacing_scale
   Applies consistent spacing preset to a container.
   Quick way to standardize spacing: compact/default/spacious.
+  
+  ### fix_z_order
+  Detects and fixes z-order issues where backgrounds cover content.
+  Critical when creating designs programmatically (appendChild adds to front).
+  Use with `autoFix: true` to automatically reorder elements by priority.
   
   ## Examples
   

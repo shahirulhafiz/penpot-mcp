@@ -241,6 +241,177 @@ export class PenpotUtils {
     }
 
     /**
+     * Determines the z-order priority for a shape based on its type and name.
+     * Lower priority = should be at back (rendered first)
+     * Higher priority = should be at front (rendered last)
+     *
+     * Priority levels:
+     *   0: Background elements (name contains 'BG', 'Background', 'Panel')
+     *   1: Regular rectangles/shapes (content containers)
+     *   2: Other shapes (ellipses, paths, cards, buttons, etc.)
+     *   3: Text elements (should always be on top)
+     *
+     * @param shape - The shape to determine priority for
+     * @returns A priority number (0-3), lower = back, higher = front
+     */
+    public static getZOrderPriority(shape: Shape): number {
+        const name = shape.name.toLowerCase();
+
+        // Background elements - should be at back
+        if (
+            name.includes("bg") ||
+            name.includes("background") ||
+            name.includes("panel") ||
+            name.includes("backdrop") ||
+            name.includes("overlay")
+        ) {
+            return 0;
+        }
+
+        // Text elements - should be at front
+        if (shape.type === "text") {
+            return 3;
+        }
+
+        // Regular rectangles (likely content containers, cards, etc.)
+        if (shape.type === "rectangle") {
+            // Check if it looks like a card or container
+            if (
+                name.includes("card") ||
+                name.includes("container") ||
+                name.includes("box") ||
+                name.includes("badge") ||
+                name.includes("button") ||
+                name.includes("progress")
+            ) {
+                return 2;
+            }
+            return 1;
+        }
+
+        // Other shapes (ellipses, paths, images, etc.)
+        return 2;
+    }
+
+    /**
+     * Fixes the z-order of children in a container by sorting them by priority.
+     * Background elements are moved to the back (index 0), text to the front.
+     *
+     * Z-order in Penpot:
+     * - Index 0 = BACK (rendered first, appears behind)
+     * - Last index = FRONT (rendered last, appears on top)
+     *
+     * This is essential when creating designs programmatically because appendChild()
+     * adds elements to the END (front), which can cause backgrounds added later
+     * to cover content.
+     *
+     * @param container - The container shape whose children should be reordered
+     * @returns true if the order was changed, false if already correct
+     */
+    public static fixZOrder(container: Shape): boolean {
+        if (!("children" in container) || !container.children || container.children.length < 2) {
+            return false;
+        }
+
+        const children = [...container.children];
+
+        // Sort by priority (lower priority = lower index = back)
+        const sorted = children.sort((a, b) => {
+            return this.getZOrderPriority(a) - this.getZOrderPriority(b);
+        });
+
+        // Check if order changed
+        const orderChanged = children.some((child, i) => child.id !== sorted[i].id);
+
+        if (!orderChanged) {
+            return false;
+        }
+
+        // Apply new order using setParentIndex
+        // Note: setParentIndex is available on all shapes but TypeScript types may not reflect this
+        sorted.forEach((child, newIndex) => {
+            (child as any).setParentIndex(newIndex);
+        });
+
+        return true;
+    }
+
+    /**
+     * Analyzes the z-order of children in a container and returns any issues found.
+     * An issue occurs when a lower-priority element (e.g., background) has a higher
+     * index than a higher-priority element (e.g., text), causing it to appear in front.
+     *
+     * @param container - The container shape to analyze
+     * @returns Array of z-order issues found, empty if no issues
+     */
+    public static analyzeZOrder(
+        container: Shape
+    ): Array<{
+        type: "inversion" | "background-not-at-back";
+        details: {
+            behind: { id: string; name: string; type: string; priority: number; index: number };
+            inFront: { id: string; name: string; type: string; priority: number; index: number };
+        };
+    }> {
+        if (!("children" in container) || !container.children || container.children.length < 2) {
+            return [];
+        }
+
+        const issues: Array<{
+            type: "inversion" | "background-not-at-back";
+            details: {
+                behind: { id: string; name: string; type: string; priority: number; index: number };
+                inFront: { id: string; name: string; type: string; priority: number; index: number };
+            };
+        }> = [];
+
+        const children = container.children;
+
+        // Map children with their current index and priority
+        const childData = children.map((child, index) => ({
+            shape: child,
+            id: child.id,
+            name: child.name,
+            type: child.type,
+            currentIndex: index,
+            priority: this.getZOrderPriority(child),
+        }));
+
+        // Check for inversions: lower priority elements should have lower indices
+        for (let i = 0; i < childData.length; i++) {
+            for (let j = i + 1; j < childData.length; j++) {
+                const a = childData[i]; // lower index (back)
+                const b = childData[j]; // higher index (front)
+
+                // If a has higher priority than b, but a is behind b, that's an issue
+                if (a.priority > b.priority) {
+                    issues.push({
+                        type: a.priority === 0 || b.priority === 0 ? "background-not-at-back" : "inversion",
+                        details: {
+                            behind: {
+                                id: a.id,
+                                name: a.name,
+                                type: a.type,
+                                priority: a.priority,
+                                index: a.currentIndex,
+                            },
+                            inFront: {
+                                id: b.id,
+                                name: b.name,
+                                type: b.type,
+                                priority: b.priority,
+                                index: b.currentIndex,
+                            },
+                        },
+                    });
+                }
+            }
+        }
+
+        return issues;
+    }
+
+    /**
      * Decodes a base64 string to a Uint8Array.
      * This is required because the Penpot plugin environment does not provide the atob function.
      *

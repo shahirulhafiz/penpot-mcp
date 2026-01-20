@@ -54,12 +54,23 @@ initial_instructions: |
     * `fills`, `strokes` - Styling properties
     * `rotation`, `opacity`, `blocked`, `hidden`, `visible`
 
-  **Z-Order**:
-    * The z-order of shapes is determined by the order in the `children` array of the parent shape.
-      Therefore, when creating shapes that should be on top of each other, add them to the parent in the correct order
-      (i.e. add background shapes first, then foreground shapes later).
+  **Z-Order** (CRITICAL - Common Source of Bugs):
+    * In Penpot's children array: **Index 0 = BACK** (rendered first), **Last index = FRONT** (rendered last, on top)
+    * `appendChild()` adds elements to the END of the array (highest index = FRONT)
+    * **Common Pitfall:** When creating designs programmatically:
+      - If you add backgrounds FIRST, they end up at the BACK (correct ✓)
+      - If you add a background LATER (e.g., during refactoring), it ends up at the FRONT and COVERS EVERYTHING
+    * **Best Practice:** Always verify z-order after creating elements, especially if backgrounds are added later
     * To modify z-order after creation, use these methods: `bringToFront()`, `sendToBack()`, `bringForward()`, `sendBackward()`,
-      and, for precise control, `setParentIndex(index)` (0-based).
+      and, for precise control, `setParentIndex(index)` (0-based)
+    * Use `penpotUtils.fixZOrder(container)` to automatically sort children by priority (backgrounds → shapes → text)
+    * Use `penpotUtils.analyzeZOrder(container)` to detect z-order issues without fixing them
+    * Use `penpotUtils.getZOrderPriority(shape)` to get a shape's z-order priority (0=back, 3=front)
+    * **Z-Order Priority Reference:**
+      - Priority 0 (BACK): Elements named 'BG', 'Background', 'Panel', 'Backdrop'
+      - Priority 1: Plain rectangles
+      - Priority 2: Cards, containers, buttons, badges, other shapes
+      - Priority 3 (FRONT): Text elements
 
   **Modification Methods**:
     * `resize(width, height)` - Change dimensions (required for width/height since they're read-only)
