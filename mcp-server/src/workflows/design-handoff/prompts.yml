@@ -1,0 +1,193 @@
+workflow_instructions: |
+  # Design Handoff Workflow
+  
+  This workflow provides a complete design-to-code pipeline with framework-agnostic output.
+  Use this workflow when implementing UI designs from Penpot into any frontend framework.
+  
+  ## Integration with Other Workflows
+  
+  This workflow complements the **design-quality** workflow:
+  - Use `validate_design` (design-quality) to check design before handoff
+  - Use `extract_design_specs` (design-quality) for single-component CSS
+  - Use this workflow for complete multi-format handoff with state detection
+  
+  ## Context System
+  
+  Tools share context via `storage.handoffContext`:
+  - Run tools in sequence to build up context
+  - Use `target: "context"` to reference previous tool results
+  - Context persists within a session
+  
+  ## Quick Start
+  
+  For a complete design handoff, run these tools in sequence:
+  
+  1. `analyze_design_context` - Understand the design structure
+  2. `generate_design_tokens` - Extract colors, typography, spacing
+  3. `detect_component_states` - Find visual variants (selected, hover, etc.)
+  4. `identify_external_assets` - Get fonts, icons, images
+  5. `generate_implementation_guide` - Create developer documentation
+  
+  ## Recommended Workflow by Scenario
+  
+  ### Scenario 1: New Project from Design
+  
+  Run full workflow in order:
+  ```
+  analyze_design_context → generate_design_tokens (format: "all") 
+  → detect_component_states → identify_external_assets 
+  → generate_implementation_guide (framework: your-choice)
+  ```
+  
+  ### Scenario 2: Implementing a Single Component
+  
+  Focus on specific elements:
+  ```
+  1. Select the component in Penpot
+  2. Run analyze_design_context (target: "selection")
+  3. Run generate_design_tokens (target: "selection")
+  4. Run detect_component_states (target: "selection")
+  ```
+  
+  ### Scenario 3: Debugging Style Mismatch
+  
+  When implementation doesn't match design:
+  ```
+  1. Run generate_design_tokens on the problem area
+  2. Compare extracted values with your implementation
+  3. Run detect_component_states to find missed states
+  ```
+  
+  ## Tool Overview
+  
+  ### analyze_design_context
+  
+  Understands the design before extraction:
+  - Component hierarchy and nesting
+  - Semantic types (header, card, button, etc.)
+  - Layout patterns (flex, grid, absolute)
+  - Interactive elements
+  
+  **Best Practice:** Always run this first to understand what you're implementing.
+  
+  ### generate_design_tokens
+  
+  Extracts design tokens in multiple formats:
+  - `css`: CSS custom properties (:root variables)
+  - `tailwind-v3`: Tailwind config for v3
+  - `tailwind-v4`: @theme directive with fallback utilities
+  - `scss`: SCSS variables
+  - `json`: Raw token data
+  - `all`: All formats at once
+  
+  **Best Practice:** Use `format: "all"` for flexibility, `deduplicateColors: true` to reduce redundancy.
+  
+  ### detect_component_states
+  
+  Identifies visual states within designs:
+  - Selected/active states
+  - Hover states (if designed)
+  - Disabled/inactive states
+  - Status variants (success, warning, error)
+  
+  **Best Practice:** Run on components with visible variations to document state logic.
+  
+  ### identify_external_assets
+  
+  Finds external dependencies:
+  - Web fonts with import URLs
+  - Icon fonts (Material Symbols, FontAwesome, etc.)
+  - Images requiring handling
+  - Ready-to-use HTML import snippets
+  
+  **Best Practice:** Run once per project to get all font/icon imports.
+  
+  ### generate_implementation_guide
+  
+  Creates comprehensive developer documentation:
+  - Setup checklist
+  - Component structure
+  - State management hints
+  - Conditional styling reference
+  - Common pitfalls
+  
+  **Best Practice:** Generate for your target framework to get relevant code samples.
+  
+  ## Framework-Specific Guidance
+  
+  ### Tailwind CSS v4 (Important!)
+  
+  Tailwind v4 uses `@theme` directive for design tokens. However, there are compatibility notes:
+  
+  1. **Token Definition:**
+     ```css
+     @import 'tailwindcss';
+     
+     @theme {
+       --color-primary: #8f4ad9;
+     }
+     ```
+  
+  2. **Fallback Needed:** Add `:root` variables and manual utility classes:
+     ```css
+     :root {
+       --color-primary: #8f4ad9;
+     }
+     
+     .bg-primary { background-color: var(--color-primary); }
+     .text-primary { color: var(--color-primary); }
+     ```
+  
+  The `generate_design_tokens` tool with `format: "tailwind-v4"` generates both automatically.
+  
+  ### Icon Fonts (Common Pitfall!)
+  
+  Icon fonts like Material Symbols use the icon name as text content:
+  
+  ```html
+  <!-- CORRECT -->
+  <span class="material-symbols-outlined">chevron_left</span>
+  
+  <!-- WRONG - shows literal text -->
+  <span class="material-symbols-outlined"><</span>
+  ```
+  
+  The `identify_external_assets` tool detects icon fonts and provides correct usage patterns.
+  
+  ## Available Tools
+  
+  ### analyze_design_context
+  Analyzes component hierarchy, layout patterns, and semantic structure.
+  Essential first step for any implementation.
+  
+  ### generate_design_tokens
+  Extracts colors, typography, spacing, shadows into framework-ready formats.
+  Supports CSS, Tailwind v3/v4, SCSS, and JSON output.
+  
+  ### detect_component_states
+  Finds visual variants of components (selected, hover, disabled, etc.).
+  Documents state logic and provides implementation hints.
+  
+  ### identify_external_assets
+  Lists required fonts, icon fonts, and images with import code.
+  Generates ready-to-paste HTML for index.html.
+  
+  ### generate_implementation_guide
+  Creates complete developer documentation for a specific framework.
+  Includes component structure, state logic, styling reference, and code samples.
+  
+  ## Tips for Best Results
+  
+  1. **Name your layers well** - Tools infer semantics from names
+  2. **Use consistent states** - Name variants consistently (e.g., "Button Active", "Button Disabled")
+  3. **Group related elements** - Helps detect component boundaries
+  4. **Use layouts** - Flex/grid layouts provide more accurate spacing extraction
+  
+  ---
+  
+  This workflow eliminates common handoff issues:
+  - Framework theme configuration problems
+  - Missed visual states
+  - Icon font implementation errors
+  - Missing external dependencies
+  - Unclear component structure

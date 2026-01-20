@@ -23,6 +23,11 @@ workflows:
   # Design quality workflow - validation and best practices enforcement
   design-quality:
     enabled: true
+  
+  # Design handoff workflow - complete design-to-code pipeline
+  # Provides context analysis, token extraction, state detection, and implementation guides
+  design-handoff:
+    enabled: true
     
   # Example workflow configurations (uncomment to enable)
   

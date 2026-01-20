@@ -1,0 +1,32 @@
+name: design-handoff
+version: 1.0.0
+description: Complete design-to-code handoff workflow with framework-agnostic token generation, state detection, and implementation guides
+enabled: true
+
+tools:
+  # Phase 1: Context Analysis
+  - AnalyzeDesignContextTool
+  # Phase 2: Token Extraction
+  - GenerateDesignTokensTool
+  # Phase 3: State Detection
+  - DetectComponentStatesTool
+  # Phase 4: Asset Identification
+  - IdentifyExternalAssetsTool
+  # Phase 5: Documentation
+  - GenerateImplementationGuideTool
+
+requires:
+  - core
+
+prompts: prompts.yml
+
+metadata:
+  author: Penpot Team
+  repository: https://github.com/penpot/penpot-mcp
+  license: MPL-2.0
+  tags:
+    - design-to-code
+    - handoff
+    - tokens
+    - implementation
+    - developer-experience
