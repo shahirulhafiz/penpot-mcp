@@ -16,7 +16,7 @@ The project includes a `bootstrap` script that installs dependencies, builds the
 2. Run the bootstrap command:
 
 ```bash
-npm install
+npm run build:all
 npm run bootstrap
 ```
 

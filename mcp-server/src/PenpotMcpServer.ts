@@ -2,17 +2,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { AsyncLocalStorage } from "async_hooks";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { ExecuteCodeTool } from "./tools/ExecuteCodeTool";
 import { PluginBridge } from "./PluginBridge";
 import { ConfigurationLoader } from "./ConfigurationLoader";
 import { createLogger } from "./logger";
 import { Tool } from "./Tool";
-import { HighLevelOverviewTool } from "./tools/HighLevelOverviewTool";
-import { PenpotApiInfoTool } from "./tools/PenpotApiInfoTool";
-import { ExportShapeTool } from "./tools/ExportShapeTool";
-import { ImportImageTool } from "./tools/ImportImageTool";
 import { ReplServer } from "./ReplServer";
 import { ApiDocs } from "./ApiDocs";
+import { WorkflowManager } from "./workflows/WorkflowManager";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 /**
  * Session context for request-scoped data.
@@ -30,6 +28,7 @@ export class PenpotMcpServer {
     public readonly pluginBridge: PluginBridge;
     private readonly replServer: ReplServer;
     private apiDocs: ApiDocs;
+    private workflowManager: WorkflowManager;
 
     /**
      * Manages session-specific context, particularly user tokens for each request.
@@ -61,6 +60,10 @@ export class PenpotMcpServer {
         this.configLoader = new ConfigurationLoader();
         this.apiDocs = new ApiDocs();
 
+        // Initialize WorkflowManager
+        const baseDir = dirname(fileURLToPath(import.meta.url));
+        this.workflowManager = new WorkflowManager(this, baseDir);
+
         this.server = new McpServer(
             {
                 name: "penpot-mcp-server",
@@ -74,8 +77,6 @@ export class PenpotMcpServer {
         this.tools = new Map<string, Tool<any>>();
         this.pluginBridge = new PluginBridge(this, this.webSocketPort);
         this.replServer = new ReplServer(this.pluginBridge, this.replPort);
-
-        this.registerTools();
     }
 
     /**
@@ -110,7 +111,17 @@ export class PenpotMcpServer {
     }
 
     public getInitialInstructions(): string {
-        let instructions = this.configLoader.getInitialInstructions();
+        // Get combined prompts from all enabled workflows
+        const workflowPrompts = this.workflowManager.getCombinedPrompts();
+        
+        // Parse the YAML format and extract core_instructions
+        let instructions = workflowPrompts;
+        
+        // If no workflow prompts yet (during initialization), use legacy prompts
+        if (!instructions || instructions.trim().length === 0) {
+            instructions = this.configLoader.getInitialInstructions();
+        }
+        
         instructions = instructions.replace("$api_types", this.apiDocs.getTypeNames().join(", "));
         return instructions;
     }
@@ -124,17 +135,35 @@ export class PenpotMcpServer {
         return this.sessionContext.getStore();
     }
 
-    private registerTools(): void {
-        // Create relevant tool instances (depending on file system access)
-        const toolInstances: Tool<any>[] = [
-            new ExecuteCodeTool(this),
-            new HighLevelOverviewTool(this),
-            new PenpotApiInfoTool(this, this.apiDocs),
-            new ExportShapeTool(this), // tool adapts to file system access internally
-        ];
-        if (this.isFileSystemAccessEnabled()) {
-            toolInstances.push(new ImportImageTool(this));
+    /**
+     * Initializes and registers tools from workflows.
+     * This is called during server startup after workflows are discovered.
+     */
+    private async initializeWorkflows(): Promise<void> {
+        // Load workflow configuration
+        const configPath = join(dirname(fileURLToPath(import.meta.url)), "..", "data", "workflows.yml");
+        await this.workflowManager.loadConfiguration(configPath);
+
+        // Discover and load workflows
+        const discoveryResult = await this.workflowManager.discoverWorkflows();
+        this.logger.info(
+            `Workflow discovery complete: ${discoveryResult.discovered.length} workflows loaded, ` +
+            `${discoveryResult.failed.length} failed`
+        );
+
+        if (discoveryResult.failed.length > 0) {
+            for (const failure of discoveryResult.failed) {
+                this.logger.error(`Failed to load workflow at ${failure.path}: ${failure.error}`);
+            }
         }
+
+        // Register tools from enabled workflows
+        await this.registerTools();
+    }
+
+    private async registerTools(): Promise<void> {
+        // Get all tools from enabled workflows
+        const toolInstances = this.workflowManager.getEnabledTools();
 
         for (const tool of toolInstances) {
             const toolName = tool.getToolName();
@@ -153,6 +182,8 @@ export class PenpotMcpServer {
                 }
             );
         }
+        
+        this.logger.info(`Registered ${toolInstances.length} tools from enabled workflows`);
     }
 
     private setupHttpEndpoints(): void {
@@ -227,6 +258,9 @@ export class PenpotMcpServer {
     }
 
     async start(): Promise<void> {
+        // Initialize workflows before starting the server
+        await this.initializeWorkflows();
+
         const { default: express } = await import("express");
         this.app = express();
         this.app.use(express.json());

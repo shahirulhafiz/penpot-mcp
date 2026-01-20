@@ -1,0 +1,25 @@
+name: core
+version: 1.0.0
+description: Core Penpot MCP functionality including code execution, shape export/import, and API documentation
+enabled: true
+
+tools:
+  - ExecuteCodeTool
+  - ExportShapeTool
+  - ImportImageTool
+  - HighLevelOverviewTool
+  - PenpotApiInfoTool
+
+taskHandlers:
+  - ExecuteCodeTaskHandler
+
+prompts: prompts.yml
+
+metadata:
+  author: Penpot Team
+  repository: https://github.com/penpot/penpot-mcp
+  license: MPL-2.0
+  tags:
+    - core
+    - essential
+    - code-execution

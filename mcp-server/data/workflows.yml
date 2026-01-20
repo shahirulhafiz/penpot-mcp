@@ -1,0 +1,46 @@
+# Workflow Configuration for Penpot MCP Server
+# This file controls which workflows are enabled and their configuration
+
+# Global workflow settings
+settings:
+  # Automatically discover workflows in the workflows directory
+  auto_discover: true
+  
+  # Path to the workflows directory (relative to mcp-server/src/)
+  workflows_dir: "./workflows"
+  
+  # Load workflows from node_modules (external workflow packages)
+  load_external_workflows: false
+
+# Per-workflow configuration
+# You can override the enabled state from each workflow's manifest
+# and provide workflow-specific configuration
+workflows:
+  # Core workflow - provides essential tools (execute_code, export_shape, etc.)
+  core:
+    enabled: true
+  
+  # Design quality workflow - validation and best practices enforcement
+  design-quality:
+    enabled: true
+    
+  # Example workflow configurations (uncomment to enable)
+  
+  # flex-layout:
+  #   enabled: true
+  #   config:
+  #     default_gap: 16
+  #     default_padding: 24
+  
+  # design-tokens:
+  #   enabled: false
+  #   config:
+  #     enforce_tokens: true
+  #     allow_raw_colors: false
+
+# Environment variable overrides:
+# You can enable/disable workflows via environment variables:
+#   PENPOT_MCP_WORKFLOW_CORE=true
+#   PENPOT_MCP_WORKFLOW_FLEX_LAYOUT=false
+#
+# These take precedence over the settings in this file.

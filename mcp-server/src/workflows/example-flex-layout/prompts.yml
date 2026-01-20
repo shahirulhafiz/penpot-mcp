@@ -1,0 +1,43 @@
+workflow_instructions: |
+  # Flex Layout Workflow
+  
+  This workflow provides automated tools for creating boards with Flex (Auto-Layout) enabled.
+  
+  ## Available Tools
+  
+  ### create_flex_container
+  
+  Creates a Board with Auto-Layout (Flex) configured according to specifications.
+  
+  **ALWAYS use this tool** instead of manually creating boards when the user wants to create:
+  - UI cards
+  - Button groups
+  - Navigation bars
+  - Lists
+  - Any container that should automatically adjust to its content
+  
+  **Parameters:**
+  - `name` (required): Name for the container board
+  - `direction` (required): "row" or "column" - flex direction
+  - `gap` (optional, default: 16): Gap between children in pixels
+  - `padding` (optional, default: 24): Padding inside the container in pixels
+  
+  ## Usage Examples
+  
+  User: "Create a horizontal flex container called 'Header'"
+  → Use: create_flex_container with name="Header", direction="row"
+  
+  User: "Make a card with 20px gap and 32px padding"
+  → Use: create_flex_container with gap=20, padding=32
+  
+  User: "Create a vertical list for menu items"
+  → Use: create_flex_container with direction="column"
+  
+  ## Design Best Practices
+  
+  When creating flex containers:
+  - Use horizontal (row) for: headers, toolbars, button groups, inline elements
+  - Use vertical (column) for: forms, menus, content sections, stacked cards
+  - Default gap of 16px works well for most UI components
+  - Increase padding to 32px or 40px for more spacious designs
+  - Decrease gap to 8px for tightly packed elements

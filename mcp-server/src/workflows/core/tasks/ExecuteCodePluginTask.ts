@@ -1,4 +1,4 @@
-import { PluginTask } from "../PluginTask";
+import { PluginTask } from "../../../PluginTask.js";
 import { ExecuteCodeTaskParams, ExecuteCodeTaskResultData, PluginTaskResult } from "@penpot-mcp/common";
 
 /**

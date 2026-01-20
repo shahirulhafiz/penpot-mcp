@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { Tool } from "../Tool";
-import type { ToolResponse } from "../ToolResponse";
-import { TextResponse } from "../ToolResponse";
+import { Tool } from "../../../Tool.js";
+import type { ToolResponse } from "../../../ToolResponse.js";
+import { TextResponse } from "../../../ToolResponse.js";
 import "reflect-metadata";
-import { PenpotMcpServer } from "../PenpotMcpServer";
-import { ExecuteCodePluginTask } from "../tasks/ExecuteCodePluginTask";
+import { PenpotMcpServer } from "../../../PenpotMcpServer.js";
+import { ExecuteCodePluginTask } from "../tasks/ExecuteCodePluginTask.js";
 import { ExecuteCodeTaskParams } from "@penpot-mcp/common";
 
 /**

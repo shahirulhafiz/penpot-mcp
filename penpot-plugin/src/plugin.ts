@@ -1,10 +1,28 @@
-import { ExecuteCodeTaskHandler } from "./task-handlers/ExecuteCodeTaskHandler";
+import { ExecuteCodeTaskHandler } from "./workflows/core/task-handlers/ExecuteCodeTaskHandler";
 import { Task, TaskHandler } from "./TaskHandler";
+import { WorkflowManager } from "./workflows/WorkflowManager";
 
 /**
- * Registry of all available task handlers.
+ * Initialize workflow manager and register workflows
  */
-const taskHandlers: TaskHandler[] = [new ExecuteCodeTaskHandler()];
+const workflowManager = WorkflowManager.getInstance();
+
+// Register core workflow
+workflowManager.registerWorkflow(
+    {
+        name: "core",
+        version: "1.0.0",
+        description: "Core Penpot MCP functionality",
+        enabled: true,
+    },
+    [new ExecuteCodeTaskHandler()],
+    "workflows/core"
+);
+
+/**
+ * Get all task handlers from enabled workflows
+ */
+const taskHandlers: TaskHandler[] = workflowManager.getEnabledHandlers();
 
 // Determine whether multi-user mode is enabled based on build-time configuration
 declare const IS_MULTI_USER_MODE: boolean;

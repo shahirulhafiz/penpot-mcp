@@ -1,6 +1,6 @@
-import { Task, TaskHandler } from "../TaskHandler";
-import { ExecuteCodeTaskParams, ExecuteCodeTaskResultData } from "../../../common/src";
-import { PenpotUtils } from "../PenpotUtils.ts";
+import { Task, TaskHandler } from "../../../TaskHandler";
+import { ExecuteCodeTaskParams, ExecuteCodeTaskResultData } from "@penpot-mcp/common";
+import { PenpotUtils } from "../../../PenpotUtils";
 
 /**
  * Console implementation that captures all log output for code execution.

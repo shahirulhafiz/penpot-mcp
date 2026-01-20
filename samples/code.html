@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schema Enforcer - Upload</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "primary-foreground": "#ffffff",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0f172a",
+                        "card-light": "#ffffff",
+                        "card-dark": "#1e293b",
+                        "border-light": "#e2e8f0",
+                        "border-dark": "#334155",
+                        "text-primary-light": "#0f172a",
+                        "text-primary-dark": "#f8fafc",
+                        "text-secondary-light": "#64748b",
+                        "text-secondary-dark": "#94a3b8",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #475569;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark transition-colors duration-200">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<header class="flex h-16 shrink-0 items-center justify-between border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center size-8 rounded bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-xl">dataset</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark">Schema Enforcer</h1>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-medium text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-medium text-primary" href="#">Upload</a>
+<a class="text-sm font-medium text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-primary transition-colors" href="#">Schemas</a>
+<a class="text-sm font-medium text-text-secondary-light hover:text-primary dark:text-text-secondary-dark dark:hover:text-primary transition-colors" href="#">Logs</a>
+</nav>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/50">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span class="text-xs font-medium text-emerald-700 dark:text-emerald-400">System Healthy</span>
+</div>
+<div class="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 bg-cover bg-center border border-border-light dark:border-border-dark" data-alt="User avatar placeholder" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBs3BtA4tpagVc0d9xOfj45GlH2_vIA5f1cli5P2ox0t9qbc6-mxdQ96PPa-fE5G8LEkfxJKs9THOr8HgTUjE0XBTpo6zgrfn6xJGtR1byAGSlgbDC9ubFd_884IAt1mzH3XWgs_qkIpOy16_UqDq5HKKS7SyU3MWQyZDeXooM3TlYZbMLGO780Q4JRqUkmi_I9xo1nn_4wyLK8vjbmGWsWRYnJnMLtjBgOeUEWaFyC0NfUW1A7airm67r9BvAAsBRMmoGa-ApMtg');"></div>
+</div>
+</header>
+<div class="shrink-0 border-b border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6 py-2">
+<div class="mx-auto max-w-full flex gap-8 justify-start">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 size-8 flex items-center justify-center">
+<span class="material-symbols-outlined text-base">speed</span>
+</div>
+<div>
+<span class="font-medium text-text-secondary-light dark:text-text-secondary-dark text-sm">Throttle Limit</span>
+<div class="flex items-end gap-1">
+<span class="font-bold text-text-primary-light dark:text-text-primary-dark text-base">10 RPM</span>
+<span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">per user</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 size-8 flex items-center justify-center">
+<span class="material-symbols-outlined text-base">dns</span>
+</div>
+<div>
+<span class="font-medium text-text-secondary-light dark:text-text-secondary-dark text-sm">Queue Status</span>
+<div class="flex items-end gap-1">
+<span class="font-bold text-text-primary-light dark:text-text-primary-dark text-base">Active</span>
+<span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Redis backed</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 size-8 flex items-center justify-center">
+<span class="material-symbols-outlined text-base">precision_manufacturing</span>
+</div>
+<div>
+<span class="font-medium text-text-secondary-light dark:text-text-secondary-dark text-sm">Worker Nodes</span>
+<div class="flex items-end gap-1">
+<span class="font-bold text-text-primary-light dark:text-text-primary-dark text-base">5/5</span>
+<span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">Operational</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<main class="flex flex-1 overflow-hidden">
+<div class="flex-[2] flex flex-col p-6 lg:px-12 lg:py-8 relative">
+<div class="mx-auto max-w-5xl flex-1 flex flex-col space-y-8 pb-20">
+<div class="flex flex-col gap-4 mb-4">
+<div>
+<h2 class="text-3xl font-bold tracking-tight text-text-primary-light dark:text-text-primary-dark">Document Ingestion</h2>
+<p class="mt-1 text-text-secondary-light dark:text-text-secondary-dark">Manage and validate your B2B product brochures against the defined schema.</p>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-6 shadow-sm">
+<h3 class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark mb-4">Queue Details</h3>
+<ul class="space-y-3">
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm">sync</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Product_Catalog_2024_Q1.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-primary py-1 px-2 rounded-full bg-blue-100 dark:bg-blue-900/20">Validating</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
+<span class="material-symbols-outlined text-sm">data_thresholding</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Tech_Specs_v2.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-indigo-500 py-1 px-2 rounded-full bg-indigo-100 dark:bg-indigo-900/20">Processing</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-gray-400/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Marketing_Brochure_Draft.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark py-1 px-2 rounded-full bg-gray-100 dark:bg-gray-700/50">Queued</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-gray-400/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Sales_Deck_Enterprise.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark py-1 px-2 rounded-full bg-gray-100 dark:bg-gray-700/50">Queued</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark opacity-60 group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Legacy_Manual_2023.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-green-500 py-1 px-2 rounded-full bg-green-100 dark:bg-green-900/20">Completed</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm">sync</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Product_Catalog_2024_Q1.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-primary py-1 px-2 rounded-full bg-blue-100 dark:bg-blue-900/20">Validating</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500">
+<span class="material-symbols-outlined text-sm">data_thresholding</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Tech_Specs_v2.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-indigo-500 py-1 px-2 rounded-full bg-indigo-100 dark:bg-indigo-900/20">Processing</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-gray-400/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Marketing_Brochure_Draft.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark py-1 px-2 rounded-full bg-gray-100 dark:bg-gray-700/50">Queued</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</li>
+<li class="flex items-center justify-between rounded-lg bg-background-light dark:bg-background-dark p-3 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-2">
+<div class="size-5 flex items-center justify-center rounded-full bg-gray-400/10 text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-sm">schedule</span>
+</div>
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[200px]">Sales_Deck_Enterprise.pdf</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark py-1 px-2 rounded-full bg-gray-100 dark:bg-gray-700/50">Queued</span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 right-0 h-16 shrink-0 border-t border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-6 py-3 flex items-center justify-between">
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm">Drag &amp; Drop Files Here (Max 25MB per file)</p>
+<button class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-blue-500/20 hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-slate-900 transition-all">
+<span class="material-symbols-outlined text-base">upload</span>
+                            Select Files
+                        </button>
+<input accept=".pdf" class="absolute inset-0 cursor-pointer opacity-0" multiple="" type="file"/>
+</div>
+</div>
+<aside class="flex-1 max-w-[400px] shrink-0 border-l border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-6 flex flex-col overflow-hidden">
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h3 class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark">Batch Health Dashboard</h3>
+</div>
+<div class="rounded-lg bg-background-light dark:bg-background-dark p-4 border border-border-light dark:border-border-dark flex flex-col gap-3">
+<div class="flex items-center justify-between text-sm">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark">Batch Progress</p>
+<span class="text-text-secondary-light dark:text-text-secondary-dark">5/10 Files Completed</span>
+</div>
+<div class="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+<div class="h-full bg-green-500 w-[50%]"></div>
+</div>
+<div class="flex items-center justify-between text-xs">
+<div class="flex items-center gap-1">
+<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">4 Processing</span>
+<span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-300">5 Queued</span>
+</div>
+<div class="flex items-center gap-1 text-text-secondary-light dark:text-text-secondary-dark bg-yellow-50 dark:bg-yellow-900/10 px-2 py-0.5 rounded-md border border-yellow-100 dark:border-yellow-900/30">
+<span class="material-symbols-outlined text-yellow-600 dark:text-yellow-500 text-sm">info</span>
+                    10 RPM
+                </div>
+</div>
+</div>
+</div>
+<div class="mt-6 mb-4 flex items-center justify-between px-1">
+<h3 class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">Throttle Queue</h3>
+<button class="text-sm text-primary hover:underline">Clear Completed</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar -mr-4 pr-4">
+<ul class="space-y-2">
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Product_Catalog_2024_Q1.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-primary flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Tech_Specs_v2.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Marketing_Brochure_Draft.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-gray-500 flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Sales_Deck_Enterprise.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-gray-500 flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark opacity-60 group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Legacy_Manual_2023.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-green-500 flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Product_Catalog_2024_Q1.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-primary flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Tech_Specs_v2.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-indigo-500 flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">cancel</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Marketing_Brochure_Draft.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-gray-500 flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</li>
+<li class="flex items-center rounded-lg bg-background-light dark:bg-background-dark p-2 border border-border-light dark:border-border-dark group hover:bg-card-light dark:hover:bg-slate-800/50 transition-colors">
+<p class="font-medium text-text-primary-light dark:text-text-primary-dark text-sm truncate max-w-[calc(100%-80px)]">Sales_Deck_Enterprise.pdf</p>
+<div class="ml-auto flex items-center gap-2">
+<span class="size-2 rounded-full bg-gray-500 flex-shrink-0"></span>
+<button class="text-text-secondary-light dark:text-text-secondary-dark hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">delete</span>
+</button>
+</div>
+</li>
+</ul>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

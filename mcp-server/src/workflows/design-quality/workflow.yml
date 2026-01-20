@@ -1,0 +1,27 @@
+name: design-quality
+version: 1.0.0
+description: Design quality assurance tools based on Penpot best practices
+enabled: true
+
+tools:
+  - ValidateDesignTool
+  - DetectClippingTool
+  - FixSpacingTool
+  - AuditLayerNamesTool
+  - ApplySpacingScaleTool
+
+requires:
+  - core
+
+prompts: prompts.yml
+
+metadata:
+  author: Penpot Team
+  repository: https://github.com/penpot/penpot-mcp
+  license: MPL-2.0
+  tags:
+    - quality-assurance
+    - validation
+    - best-practices
+    - spacing
+    - naming

@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import { PluginBridge } from "./PluginBridge";
-import { ExecuteCodePluginTask } from "./tasks/ExecuteCodePluginTask";
+import { ExecuteCodePluginTask } from "./workflows/core/tasks/ExecuteCodePluginTask";
 import { createLogger } from "./logger";
 
 /**

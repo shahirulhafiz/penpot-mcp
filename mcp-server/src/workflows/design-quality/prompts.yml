@@ -1,0 +1,291 @@
+workflow_instructions: |
+  # Design Quality Workflow
+  
+  This workflow enforces best practices for creating maintainable, consistent, and efficient Penpot designs.
+  
+  ## Validation Protocol
+  
+  **IMPORTANT:** ALWAYS run `validate_design` after making significant design changes to catch issues early.
+  
+  The validation tool checks for:
+  - **Content clipping** - Elements extending beyond parent bounds
+  - **Inconsistent spacing** - Non-standard gap and padding values
+  - **Poor layer naming** - Generic names like "Rectangle 47"
+  - **Missing layout systems** - Boards without flex/grid layouts
+  - **Accessibility issues** - Text too small, interactive elements too small
+  
+  ### When to Validate
+  
+  Run `validate_design` in these situations:
+  1. After creating a new component or section
+  2. After repositioning or resizing multiple elements
+  3. Before finalizing a design for handoff
+  4. When troubleshooting visual issues
+  5. After applying bulk changes
+  
+  ## Standard Spacing Scale
+  
+  **ALWAYS USE THESE VALUES** for gaps and padding:
+  
+  | Name | Value | Use Case |
+  |------|-------|----------|
+  | xs   | 4px   | Tight spacing within components (button text padding, icon spacing) |
+  | sm   | 8px   | Small spacing for related elements (list item gaps, form field groups) |
+  | md   | 12px  | Medium spacing for component internals (card content padding) |
+  | lg   | 16px  | Large spacing between components (default gap for most containers) |
+  | xl   | 24px  | Extra large for section spacing (between major groups) |
+  | xxl  | 32px  | Maximum for major sections (page-level divisions) |
+  
+  ### Spacing Best Practices
+  
+  - Use **lg (16px)** as default for most flex containers
+  - Use **md (12px)** for compact lists or tight layouts
+  - Use **xl (24px)** or **xxl (32px)** for padding in cards and panels
+  - Use **sm (8px)** for tightly packed elements like tag lists
+  - **NEVER** use arbitrary values like 15px, 18px, 23px - snap to the scale
+  
+  ## Layout System Rules
+  
+  ### When to Use Flex Layout
+  
+  **ALWAYS** use flex layout for:
+  - Navigation bars (horizontal/row)
+  - Button groups (horizontal/row)
+  - Stats or metrics rows (horizontal/row)
+  - Form fields (vertical/column)
+  - Card content (vertical/column)
+  - Sidebar menus (vertical/column)
+  - Any list of elements (row or column based on direction)
+  
+  **NEVER** use manual positioning (absolute x/y) for lists of elements.
+  
+  ### When to Use Grid Layout
+  
+  Use grid layout for:
+  - Dashboard layouts with fixed columns
+  - Card grids (product listings, galleries)
+  - Complex multi-column forms
+  - Calendar or table structures
+  - Magazine-style layouts
+  
+  ### When to Use Manual Positioning
+  
+  Manual positioning is ONLY appropriate for:
+  - Decorative elements (backgrounds, illustrations)
+  - Overlapping elements (badges on avatars, notification dots)
+  - Absolutely positioned items (tooltips, modals, popovers)
+  - Single unique elements that don't repeat
+  
+  ## Layer Naming Conventions
+  
+  Follow these naming rules for ALL layers:
+  
+  ### Format: Title Case
+  
+  - ✅ Good: "Submit Button", "User Card", "Header Logo"
+  - ❌ Bad: "submit button", "SUBMIT BUTTON", "submitButton"
+  
+  ### Be Descriptive
+  
+  - ✅ Good: "Primary Action Button", "User Avatar Image", "Search Input Field"
+  - ❌ Bad: "Rectangle 47", "Ellipse 12", "Frame 234", "Group 8"
+  
+  ### Include Context
+  
+  - ✅ Good: "Header Logo", "Footer Copyright Text", "Sidebar Navigation"
+  - ❌ Bad: "Logo", "Text", "Navigation"
+  
+  ### For Variants
+  
+  Use **Base + Variant** pattern:
+  - ✅ Good: "Button Primary", "Button Secondary", "Button Danger"
+  - ✅ Good: "Card Default", "Card Highlighted", "Card Disabled"
+  - ❌ Bad: "PrimaryButton", "button-secondary", "Danger_Button"
+  
+  ## Component Organization
+  
+  ### Hierarchy Depth Limit
+  
+  **Maximum recommended nesting: 4-5 levels**
+  
+  Example of good hierarchy:
+  ```
+  Page Root (Level 0)
+  └── Header Section (Level 1)
+      └── Navigation Container (Level 2)
+          └── Nav Item (Level 3)
+              └── Nav Icon (Level 4)
+  ```
+  
+  If you exceed 5 levels, consider:
+  1. Creating a reusable component
+  2. Flattening the hierarchy
+  3. Restructuring the layout
+  
+  ### Grouping Rules
+  
+  Always group related elements:
+  1. **Functional Groups** - Elements that work together (form field + label + error)
+  2. **Layout Groups** - Elements sharing layout behavior (row of buttons)
+  3. **Section Groups** - Major page divisions (header, main, footer)
+  
+  ## Common Design Issues & Solutions
+  
+  ### Issue: Content Clipping
+  
+  **Symptoms:** Text or elements cut off at container edges
+  
+  **Solutions:**
+  1. Run `detect_clipping` to find all clipping issues
+  2. Increase parent container size
+  3. Apply flex layout for automatic content handling
+  4. Reduce child element size if appropriate
+  
+  ### Issue: Inconsistent Spacing
+  
+  **Symptoms:** Uneven gaps, different spacing in similar components
+  
+  **Solutions:**
+  1. Run `fix_spacing` to detect non-standard values
+  2. Use `fix_spacing` with `autoFix: true` to snap to scale
+  3. Apply presets with `apply_spacing_scale` (compact/default/spacious)
+  
+  ### Issue: Poor Layer Names
+  
+  **Symptoms:** Generic names like "Rectangle 47", "Group 12"
+  
+  **Solutions:**
+  1. Run `audit_layer_names` to find poorly named layers
+  2. Use `audit_layer_names` with `autoRename: true` for automatic suggestions
+  3. Manually rename following Title Case convention
+  
+  ### Issue: Missing Layout Systems
+  
+  **Symptoms:** Boards with manual positioning, layouts break on edits
+  
+  **Solutions:**
+  1. Add flex layout: `board.addFlexLayout()`
+  2. Configure direction: `board.flex.dir = "row"` or `"column"`
+  3. Set gaps: `board.flex.rowGap = 16` and `board.flex.columnGap = 16`
+  4. Set padding: `board.flex.verticalPadding = 24`, `board.flex.horizontalPadding = 24`
+  
+  ## Accessibility Requirements
+  
+  ### Minimum Text Size
+  
+  - **Never** use text smaller than 12px
+  - **Recommended** minimum: 14px for body text
+  - **Headings:** 16px and larger
+  
+  ### Interactive Element Size
+  
+  - **Minimum touch target:** 44x44px
+  - Applies to: buttons, links, icons, form controls
+  - Add padding if the element itself is smaller
+  
+  ### Color Contrast
+  
+  - Ensure sufficient contrast between text and background
+  - Use design tokens instead of arbitrary hex codes
+  - Validate contrast ratios for accessibility compliance
+  
+  ## Workflow Integration
+  
+  ### Recommended Workflow
+  
+  1. **Plan** - Define hierarchy and spacing before creating
+  2. **Structure** - Create containers with flex/grid layouts
+  3. **Content** - Add elements and group immediately
+  4. **Name** - Use descriptive names as you create
+  5. **Validate** - Run `validate_design` to catch issues
+  6. **Refine** - Use `fix_spacing`, `audit_layer_names` as needed
+  7. **Final Check** - Run `validate_design` one more time
+  
+  ### Quality Checklist
+  
+  Before finalizing any design, ensure:
+  - ✅ All elements are within parent bounds (no clipping)
+  - ✅ Spacing uses standard scale values
+  - ✅ All layers have descriptive names
+  - ✅ Containers use flex/grid layouts (not manual positioning)
+  - ✅ Text is at least 12px
+  - ✅ Interactive elements are at least 44x44px
+  - ✅ Hierarchy depth is 5 levels or less
+  
+  ## Available Tools
+  
+  ### validate_design
+  Comprehensive QA check covering all aspects of design quality.
+  Run this FIRST to get an overview of issues.
+  
+  ### detect_clipping
+  Focused tool for finding content overflow issues.
+  Use when you specifically need to check containment.
+  
+  ### fix_spacing
+  Detects and optionally fixes non-standard spacing values.
+  Use with `autoFix: true` to automatically snap to scale.
+  
+  ### audit_layer_names
+  Finds poorly named layers and suggests improvements.
+  Use with `autoRename: true` to automatically apply suggestions.
+  
+  ### apply_spacing_scale
+  Applies consistent spacing preset to a container.
+  Quick way to standardize spacing: compact/default/spacious.
+  
+  ## Examples
+  
+  ### Example 1: Creating a Card Component
+  
+  ```javascript
+  // 1. Create container with flex layout
+  const card = penpot.createBoard();
+  card.name = "User Card";
+  card.addFlexLayout();
+  card.flex.dir = "column";
+  card.flex.rowGap = 16;  // lg spacing
+  card.flex.verticalPadding = 24;  // xl padding
+  card.flex.horizontalPadding = 24;
+  
+  // 2. Add content
+  const avatar = penpot.createEllipse();
+  avatar.name = "User Avatar";
+  card.appendChild(avatar);
+  
+  const name = penpot.createText("User Name");
+  name.name = "User Name Text";
+  card.appendChild(name);
+  
+  // 3. Validate
+  // Run validate_design on the card
+  ```
+  
+  ### Example 2: Fixing Spacing Issues
+  
+  ```javascript
+  // 1. Detect issues
+  // Run: fix_spacing with target: "page"
+  
+  // 2. Review suggestions
+  
+  // 3. Auto-fix
+  // Run: fix_spacing with target: "page", autoFix: true
+  ```
+  
+  ### Example 3: Bulk Rename Layers
+  
+  ```javascript
+  // 1. Audit names
+  // Run: audit_layer_names with target: "page"
+  
+  // 2. Review suggestions
+  
+  // 3. Auto-rename
+  // Run: audit_layer_names with target: "page", autoRename: true
+  ```
+  
+  ---
+  
+  Remember: Quality designs are maintainable designs. Following these best practices
+  ensures your designs are consistent, scalable, and easy to work with over time.

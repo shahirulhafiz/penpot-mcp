@@ -1,0 +1,19 @@
+name: example-flex-layout
+version: 1.0.0
+description: Example workflow demonstrating how to create custom tools for flex layout automation
+enabled: false  # Disabled by default - set to true or use environment variable to enable
+
+tools:
+  - CreateFlexContainerTool
+
+prompts: prompts.yml
+
+metadata:
+  author: Penpot Team
+  repository: https://github.com/penpot/penpot-mcp
+  license: MPL-2.0
+  tags:
+    - example
+    - flex-layout
+    - automation
+    - ui-components

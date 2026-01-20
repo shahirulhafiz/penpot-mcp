@@ -5,8 +5,11 @@
     "type": "module",
     "main": "dist/index.js",
     "scripts": {
-        "build": "esbuild src/index.ts --bundle --platform=node --target=node18 --format=esm --outfile=dist/index.js --external:@modelcontextprotocol/* --external:ws --external:express --external:class-transformer --external:class-validator --external:reflect-metadata --external:pino --external:pino-pretty --external:js-yaml --external:sharp && npm run copy-static",
+        "build": "tsc && npm run fix-imports && npm run copy-static && npm run copy-workflows && npm run build:bundle",
+        "fix-imports": "node scripts/add-js-extensions.js",
+        "build:bundle": "esbuild dist/index.js --bundle --platform=node --target=node18 --format=esm --outfile=dist/index.bundle.js --packages=external && node -e \"require('fs').copyFileSync('dist/index.bundle.js', 'dist/index.js'); require('fs').unlinkSync('dist/index.bundle.js');\"",
         "copy-static": "node -e \"require('fs').cpSync('src/static', 'dist/static', { recursive: true })\"",
+        "copy-workflows": "node scripts/copy-workflows.js",
         "build:types": "tsc --emitDeclarationOnly --outDir dist",
         "build:full": "npm run build && npm run build:types",
         "start": "node dist/index.js",
