@@ -1,9 +1,11 @@
 name: design-handoff
-version: 1.0.0
+version: 1.1.0
 description: Complete design-to-code handoff workflow with framework-agnostic token generation, state detection, and implementation guides
 enabled: true
 
 tools:
+  # Phase 0: Pre-Implementation Validation (NEW - Run First!)
+  - ValidateHandoffReadinessTool
   # Phase 1: Context Analysis
   - AnalyzeDesignContextTool
   # Phase 2: Token Extraction

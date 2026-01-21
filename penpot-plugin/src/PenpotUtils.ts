@@ -578,6 +578,522 @@ export class PenpotUtils {
     }
 
     /**
+     * Checks if a container has any layout system (flex or grid).
+     *
+     * @param container - The container shape to check
+     * @returns Object with layout type information
+     */
+    public static hasLayout(container: Shape): { hasLayout: boolean; type: "flex" | "grid" | "none" } {
+        if ("flex" in container && container.flex) {
+            return { hasLayout: true, type: "flex" };
+        }
+        if ("grid" in container && container.grid) {
+            return { hasLayout: true, type: "grid" };
+        }
+        return { hasLayout: false, type: "none" };
+    }
+
+    /**
+     * Applies flex layout to a container with the specified configuration.
+     * If the container already has flex layout, updates the existing configuration.
+     *
+     * IMPORTANT: When a container has flex layout, child positions are managed
+     * by the layout system. Do not manually set x/y positions on children.
+     *
+     * @param container - The container shape to apply flex layout to (must be a Board)
+     * @param config - Flex layout configuration
+     * @returns true if layout was applied/updated successfully
+     */
+    public static applyFlexLayout(
+        container: Shape,
+        config: {
+            direction?: "row" | "column";
+            gap?: number;
+            rowGap?: number;
+            columnGap?: number;
+            alignItems?: "start" | "center" | "end" | "stretch";
+            justifyContent?: "start" | "center" | "end" | "space-between" | "space-around" | "space-evenly";
+            padding?: number;
+            verticalPadding?: number;
+            horizontalPadding?: number;
+            wrap?: boolean;
+        }
+    ): boolean {
+        // Check if container supports flex layout (must have addFlexLayout method)
+        if (!("addFlexLayout" in container)) {
+            return false;
+        }
+
+        const board = container as any;
+
+        // Add flex layout if not present
+        if (!board.flex) {
+            board.addFlexLayout();
+        }
+
+        const flex = board.flex;
+        if (!flex) {
+            return false;
+        }
+
+        // Apply configuration
+        if (config.direction !== undefined) {
+            flex.dir = config.direction;
+        }
+
+        // Handle gap - prefer specific rowGap/columnGap, fallback to general gap
+        if (config.rowGap !== undefined) {
+            flex.rowGap = config.rowGap;
+        } else if (config.gap !== undefined) {
+            flex.rowGap = config.gap;
+        }
+
+        if (config.columnGap !== undefined) {
+            flex.columnGap = config.columnGap;
+        } else if (config.gap !== undefined) {
+            flex.columnGap = config.gap;
+        }
+
+        if (config.alignItems !== undefined) {
+            flex.alignItems = config.alignItems;
+        }
+
+        if (config.justifyContent !== undefined) {
+            flex.justifyContent = config.justifyContent;
+        }
+
+        // Handle padding - prefer specific vertical/horizontal, fallback to general padding
+        if (config.verticalPadding !== undefined) {
+            flex.verticalPadding = config.verticalPadding;
+        } else if (config.padding !== undefined) {
+            flex.verticalPadding = config.padding;
+        }
+
+        if (config.horizontalPadding !== undefined) {
+            flex.horizontalPadding = config.horizontalPadding;
+        } else if (config.padding !== undefined) {
+            flex.horizontalPadding = config.padding;
+        }
+
+        if (config.wrap !== undefined) {
+            flex.wrap = config.wrap ? "wrap" : "nowrap";
+        }
+
+        return true;
+    }
+
+    /**
+     * Removes layout from a container, converting it back to free-form positioning.
+     *
+     * @param container - The container to remove layout from
+     * @returns true if layout was removed, false if container had no layout
+     */
+    public static removeLayout(container: Shape): boolean {
+        if ("removeFlexLayout" in container && (container as any).flex) {
+            (container as any).removeFlexLayout();
+            return true;
+        }
+        if ("removeGridLayout" in container && (container as any).grid) {
+            (container as any).removeGridLayout();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Gets the current layout configuration of a container.
+     *
+     * @param container - The container to get layout info from
+     * @returns Layout configuration or null if no layout
+     */
+    public static getLayoutConfig(container: Shape): {
+        type: "flex" | "grid";
+        direction?: string;
+        rowGap: number;
+        columnGap: number;
+        alignItems?: string;
+        justifyContent?: string;
+        verticalPadding?: number;
+        horizontalPadding?: number;
+    } | null {
+        if ("flex" in container && container.flex) {
+            const flex: FlexLayout = container.flex;
+            return {
+                type: "flex",
+                direction: flex.dir as string,
+                rowGap: flex.rowGap,
+                columnGap: flex.columnGap,
+                alignItems: flex.alignItems,
+                justifyContent: flex.justifyContent,
+                verticalPadding: flex.verticalPadding,
+                horizontalPadding: flex.horizontalPadding,
+            };
+        }
+        if ("grid" in container && container.grid) {
+            const grid: GridLayout = container.grid;
+            return {
+                type: "grid",
+                rowGap: grid.rowGap,
+                columnGap: grid.columnGap,
+            };
+        }
+        return null;
+    }
+
+    /**
+     * Enables flex-based fit-to-content sizing on a container.
+     * This is the PROPER way to auto-size buttons and similar UI elements.
+     *
+     * Unlike `fitToContent()` which manually calculates bounds and repositions the container,
+     * this function uses Penpot's native flex layout sizing which:
+     * - Automatically resizes the container to fit its content
+     * - Does NOT reposition the container (maintains its position in parent layout)
+     * - Properly handles padding via flex layout properties
+     *
+     * IMPORTANT: Use this for BUTTONS instead of `fitToContent()` to avoid position drift.
+     *
+     * @param container - The container shape (must be a Board with or without existing flex)
+     * @param options - Configuration options
+     * @returns Object with success status and configuration applied, or null if failed
+     */
+    public static enableFitContent(
+        container: Shape,
+        options?: {
+            horizontal?: boolean; // Enable horizontal fit-content (default: true)
+            vertical?: boolean; // Enable vertical fit-content (default: true)
+            padding?: number; // Uniform padding (default: no change)
+            horizontalPadding?: number; // Horizontal padding (overrides padding)
+            verticalPadding?: number; // Vertical padding (overrides padding)
+            alignItems?: "start" | "center" | "end" | "stretch"; // Child alignment (default: "center")
+            justifyContent?: "start" | "center" | "end" | "space-between"; // Content justification (default: "center")
+        }
+    ): {
+        success: boolean;
+        wasFlexAdded: boolean;
+        sizing: { horizontal: string; vertical: string };
+        padding: { horizontal: number; vertical: number };
+    } | null {
+        // Check if container supports flex layout
+        if (!("addFlexLayout" in container)) {
+            return null;
+        }
+
+        const board = container as any;
+        const wasFlexAdded = !board.flex;
+
+        // Add flex layout if not present
+        if (!board.flex) {
+            board.addFlexLayout();
+        }
+
+        const flex = board.flex;
+        if (!flex) {
+            return null;
+        }
+
+        // Set sizing mode
+        const enableHorizontal = options?.horizontal !== false;
+        const enableVertical = options?.vertical !== false;
+
+        if (enableHorizontal) {
+            flex.horizontalSizing = "fit-content";
+        }
+        if (enableVertical) {
+            flex.verticalSizing = "fit-content";
+        }
+
+        // Set padding
+        if (options?.horizontalPadding !== undefined) {
+            flex.horizontalPadding = options.horizontalPadding;
+        } else if (options?.padding !== undefined) {
+            flex.horizontalPadding = options.padding;
+        }
+
+        if (options?.verticalPadding !== undefined) {
+            flex.verticalPadding = options.verticalPadding;
+        } else if (options?.padding !== undefined) {
+            flex.verticalPadding = options.padding;
+        }
+
+        // Set alignment (default to center for buttons)
+        if (options?.alignItems !== undefined) {
+            flex.alignItems = options.alignItems;
+        } else if (wasFlexAdded) {
+            // Only set default if we just added flex
+            flex.alignItems = "center";
+        }
+
+        if (options?.justifyContent !== undefined) {
+            flex.justifyContent = options.justifyContent;
+        } else if (wasFlexAdded) {
+            // Only set default if we just added flex
+            flex.justifyContent = "center";
+        }
+
+        return {
+            success: true,
+            wasFlexAdded,
+            sizing: {
+                horizontal: flex.horizontalSizing,
+                vertical: flex.verticalSizing,
+            },
+            padding: {
+                horizontal: flex.horizontalPadding || 0,
+                vertical: flex.verticalPadding || 0,
+            },
+        };
+    }
+
+    /**
+     * Configures a container as a button with proper flex layout settings.
+     * This is a convenience function that applies button-appropriate defaults.
+     *
+     * Button containers should:
+     * - Use fit-content sizing (auto-resize to fit text)
+     * - Have centered content
+     * - Have appropriate padding (default: 8px vertical, 16px horizontal)
+     * - Maintain their position in parent layouts
+     *
+     * @param container - The container shape (must be a Board)
+     * @param options - Optional configuration overrides
+     * @returns Object with configuration applied, or null if failed
+     */
+    public static configureAsButton(
+        container: Shape,
+        options?: {
+            verticalPadding?: number; // Vertical padding (default: 8)
+            horizontalPadding?: number; // Horizontal padding (default: 16)
+            minWidth?: number; // Minimum width constraint
+            minHeight?: number; // Minimum height constraint (default: 44 for touch targets)
+        }
+    ): {
+        success: boolean;
+        config: {
+            sizing: { horizontal: string; vertical: string };
+            padding: { horizontal: number; vertical: number };
+            minSize: { width?: number; height?: number };
+        };
+    } | null {
+        const vPadding = options?.verticalPadding ?? 8;
+        const hPadding = options?.horizontalPadding ?? 16;
+        const minHeight = options?.minHeight ?? 44; // Touch target minimum
+
+        const result = this.enableFitContent(container, {
+            horizontal: true,
+            vertical: true,
+            verticalPadding: vPadding,
+            horizontalPadding: hPadding,
+            alignItems: "center",
+            justifyContent: "center",
+        });
+
+        if (!result) {
+            return null;
+        }
+
+        // Apply minimum size constraints if specified
+        // Note: minWidth/minHeight are applied via resize if the container is smaller
+        if (options?.minWidth !== undefined && container.width < options.minWidth) {
+            container.resize(options.minWidth, container.height);
+        }
+        if (minHeight !== undefined && container.height < minHeight) {
+            container.resize(container.width, minHeight);
+        }
+
+        return {
+            success: true,
+            config: {
+                sizing: result.sizing,
+                padding: { horizontal: hPadding, vertical: vPadding },
+                minSize: { width: options?.minWidth, height: minHeight },
+            },
+        };
+    }
+
+    /**
+     * Safely adds a child to a container, respecting layout systems.
+     * When a container has flex/grid layout, the layout system will position the child.
+     * When there's no layout, the child is positioned using the provided coordinates.
+     *
+     * @param container - The parent container
+     * @param child - The child shape to add
+     * @param position - Position for containers without layout (ignored if container has layout)
+     * @returns true if child was added successfully
+     */
+    public static addChildToContainer(
+        container: Shape,
+        child: Shape,
+        position?: { x?: number; y?: number }
+    ): boolean {
+        if (!("appendChild" in container)) {
+            return false;
+        }
+
+        const layoutInfo = this.hasLayout(container);
+
+        // Add the child to the container
+        (container as any).appendChild(child);
+
+        // Only set position if container has no layout
+        if (!layoutInfo.hasLayout && position) {
+            if (position.x !== undefined) {
+                child.x = container.x + position.x;
+            }
+            if (position.y !== undefined) {
+                child.y = container.y + position.y;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Auto-applies flex layout to a container based on its current children arrangement.
+     * Analyzes the children and applies the most suitable layout configuration.
+     *
+     * @param container - The container to apply auto-layout to
+     * @returns Object with applied configuration or null if couldn't apply
+     */
+    public static autoApplyFlexLayout(container: Shape): {
+        applied: boolean;
+        config: {
+            direction: "row" | "column";
+            gap: number;
+            alignItems: string;
+            justifyContent: string;
+        };
+    } | null {
+        const suggestion = this.suggestFlexConfig(container);
+        if (!suggestion) {
+            return null;
+        }
+
+        const applied = this.applyFlexLayout(container, {
+            direction: suggestion.direction,
+            gap: suggestion.gap,
+            alignItems: suggestion.alignItems,
+            justifyContent: suggestion.justifyContent,
+        });
+
+        return {
+            applied,
+            config: {
+                direction: suggestion.direction,
+                gap: suggestion.gap,
+                alignItems: suggestion.alignItems,
+                justifyContent: suggestion.justifyContent,
+            },
+        };
+    }
+
+    /**
+     * Checks if a shape with the given name already exists within the specified container.
+     * Useful for preventing duplicate element creation.
+     *
+     * @param name - The name to search for
+     * @param container - The container to search within (defaults to penpot.root)
+     * @returns The existing shape if found, null otherwise
+     */
+    public static findShapeByName(name: string, container: Shape | null = penpot.root): Shape | null {
+        return this.findShape((shape) => shape.name === name, container);
+    }
+
+    /**
+     * Checks if a shape with the given name exists within the specified container.
+     * Convenience method for checking existence before creation.
+     *
+     * @param name - The name to check for
+     * @param container - The container to search within (defaults to penpot.root)
+     * @returns true if a shape with this name exists, false otherwise
+     */
+    public static shapeExists(name: string, container: Shape | null = penpot.root): boolean {
+        return this.findShapeByName(name, container) !== null;
+    }
+
+    /**
+     * Finds all shapes that have duplicate names within a container.
+     * Returns groups of shapes that share the same name.
+     *
+     * @param container - The container to search within (defaults to penpot.root)
+     * @returns Map of shape names to arrays of shapes with that name (only includes names with 2+ shapes)
+     */
+    public static findDuplicatesByName(container: Shape | null = penpot.root): Map<string, Shape[]> {
+        const nameToShapes = new Map<string, Shape[]>();
+        
+        this.findShapes(() => true, container).forEach((shape) => {
+            const shapes = nameToShapes.get(shape.name) || [];
+            shapes.push(shape);
+            nameToShapes.set(shape.name, shapes);
+        });
+
+        // Filter to only include names with duplicates
+        const duplicates = new Map<string, Shape[]>();
+        nameToShapes.forEach((shapes, name) => {
+            if (shapes.length > 1) {
+                duplicates.set(name, shapes);
+            }
+        });
+
+        return duplicates;
+    }
+
+    /**
+     * Removes duplicate shapes by name, keeping only the first occurrence.
+     * Useful for cleaning up accidentally created duplicate elements.
+     *
+     * @param container - The container to search within (defaults to penpot.root)
+     * @param keepStrategy - Strategy for which duplicate to keep: "first" (default) or "last"
+     * @returns Object with statistics about the cleanup
+     */
+    public static removeDuplicates(
+        container: Shape | null = penpot.root,
+        keepStrategy: "first" | "last" = "first"
+    ): { totalRemoved: number; duplicateGroups: number; removedShapes: Array<{ name: string; id: string }> } {
+        const duplicates = this.findDuplicatesByName(container);
+        const removedShapes: Array<{ name: string; id: string }> = [];
+
+        duplicates.forEach((shapes, _name) => {
+            // Determine which shapes to remove based on strategy
+            const toRemove = keepStrategy === "first" ? shapes.slice(1) : shapes.slice(0, -1);
+            
+            toRemove.forEach((shape) => {
+                removedShapes.push({ name: shape.name, id: shape.id });
+                shape.remove();
+            });
+        });
+
+        return {
+            totalRemoved: removedShapes.length,
+            duplicateGroups: duplicates.size,
+            removedShapes,
+        };
+    }
+
+    /**
+     * Safely creates a shape only if no shape with the given name exists.
+     * Returns the existing shape if found, or creates a new one using the factory function.
+     *
+     * @param name - The name for the shape
+     * @param container - The container to check and create within
+     * @param createFn - Factory function to create the shape if it doesn't exist
+     * @returns Object with the shape and a boolean indicating if it was newly created
+     */
+    public static findOrCreate<T extends Shape>(
+        name: string,
+        container: Shape | null,
+        createFn: () => T
+    ): { shape: T; created: boolean } {
+        const existing = this.findShapeByName(name, container);
+        if (existing) {
+            return { shape: existing as T, created: false };
+        }
+        
+        const newShape = createFn();
+        newShape.name = name;
+        return { shape: newShape, created: true };
+    }
+
+    /**
      * Decodes a base64 string to a Uint8Array.
      * This is required because the Penpot plugin environment does not provide the atob function.
      *

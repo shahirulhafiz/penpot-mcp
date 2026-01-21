@@ -5,6 +5,17 @@ core_instructions: |
   You have access to Penpot tools in order to interact with a Penpot design project directly.
   As a precondition, the user must connect the Penpot design project to the MCP server using the Penpot MCP Plugin.
 
+  # CRITICAL: Design as Source of Truth
+  
+  **ALWAYS treat the live Penpot design as the authoritative source of truth.**
+  
+  - **Query fresh data**: Always use `execute_code` to read the current design state. Never rely on cached data or previous context.
+  - **Ignore stale context**: Previous tool results or conversation context about design structure may be outdated.
+  - **Re-query before acting**: Before modifying any element, query its current state to ensure accuracy.
+  - **No assumptions**: If information is not in the current design query, ask or query again - never assume.
+  
+  This ensures generated code accurately reflects the current state of the design, avoiding issues from stale data.
+
   IMPORTANT: When transferring styles from a Penpot design to code, make sure that you strictly adhere to the design.
     NEVER make assumptions about missing values and don't get overly creative (e.g. don't pick your own colours and stick to
     non-creative defaults such as white/black if you are lacking information).
@@ -97,6 +108,11 @@ core_instructions: |
     * **Flex Layout**: `board.flex` - A flexbox-style layout system
       - Properties: `dir` (direction), `rowGap`, `columnGap`, `alignItems`, `justifyContent`
       - Padding: `topPadding`, `rightPadding`, `bottomPadding`, `leftPadding`, or combined `verticalPadding`, `horizontalPadding`
+      - **Sizing (IMPORTANT for buttons):**
+        - `horizontalSizing`: "fill" | "auto" | "fit-content"
+        - `verticalSizing`: "fill" | "auto" | "fit-content"
+        - Use `"fit-content"` for buttons/containers that should auto-size to their content
+        - This is the CORRECT way to resize buttons - it preserves position in parent layouts
       - When a board has flex layout, child positions are controlled by the layout system, not by individual x/y coordinates
       - To modify spacing: adjust `rowGap` and `columnGap` properties, not individual child positions
       - Check with: `if (board.flex) { /* board uses flex layout */ }`
@@ -151,6 +167,17 @@ core_instructions: |
       General-purpose utility for analyzing/validating descendants
       Calls evaluator on each descendant; collects non-null/undefined results
       Powerful pattern: evaluator can return corrector functions or diagnostic data
+    * enableFitContent(container: Shape, options?): { success, wasFlexAdded, sizing, padding } | null
+      **IMPORTANT for buttons** - Enables native flex fit-content sizing on a container.
+      Unlike fitToContent() which repositions, this preserves position in parent layouts.
+      Options: { horizontal?: boolean, vertical?: boolean, padding?: number, horizontalPadding?: number, verticalPadding?: number, alignItems?, justifyContent? }
+    * configureAsButton(container: Shape, options?): { success, config } | null
+      Convenience function that configures a container as a button with proper settings.
+      Default: 8px vertical padding, 16px horizontal padding, 44px min height (touch target), centered content.
+      Options: { verticalPadding?: number, horizontalPadding?: number, minWidth?: number, minHeight?: number }
+    * fitToContent(container: Shape, options?): { oldSize, newSize } | null
+      ⚠️ **WARNING:** This manually repositions the container. For buttons in layouts, use enableFitContent() instead.
+      Options: { padding?: number, minWidth?: number, minHeight?: number }
 
   General pointers for working with Penpot designs:
     * Prefer `penpotUtils` helper functions — avoid reimplementing shape searching.
@@ -184,6 +211,13 @@ core_instructions: |
         const violations = penpotUtils.analyzeDescendants(board, (root, shape) => {
           return !penpotUtils.isContainedIn(shape, root) ? 'outside-bounds' : null;
         });
+    * **Configure button to auto-size (CORRECT way):**
+        // This preserves position in parent layout
+        penpotUtils.configureAsButton(buttonBoard);
+        // Or with custom padding:
+        penpotUtils.configureAsButton(buttonBoard, { horizontalPadding: 24, verticalPadding: 12 });
+    * **Enable fit-content on any container:**
+        penpotUtils.enableFitContent(container, { padding: 16 });
 
   # Visual Inspection of Designs
 

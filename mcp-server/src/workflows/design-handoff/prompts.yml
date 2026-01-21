@@ -4,10 +4,33 @@ workflow_instructions: |
   This workflow provides a complete design-to-code pipeline with framework-agnostic output.
   Use this workflow when implementing UI designs from Penpot into any frontend framework.
   
+  ## CRITICAL: Design as Source of Truth
+  
+  **The live Penpot design is ALWAYS the authoritative source.**
+  
+  - Query fresh design data before generating any code
+  - Ignore previous context about design structure - re-query instead
+  - Never cache or assume design state between tool calls
+  - If the design changed, the new state takes precedence over any prior information
+  
+  This ensures generated code accurately matches the current design state.
+  
+  ## CRITICAL: Pre-Implementation Validation
+  
+  **ALWAYS run `validate_handoff_readiness` FIRST before starting any implementation!**
+  
+  This validation catches common issues that cause implementation mismatches:
+  - **Text Format Variations** - Uppercase text, date formats, number formats (e.g., "WEEK 1" vs "Week 1")
+  - **Status Variants** - Missing state styling for approved/submitted/draft badges
+  - **Dimension Inconsistencies** - Elements that should be fixed size vs flexible
+  - **Interactive Elements** - Buttons, inputs, tabs requiring event handlers
+  - **Content Patterns** - Required field markers (*), icon usage, placeholder text
+  
   ## Integration with Other Workflows
   
   This workflow complements the **design-quality** workflow:
-  - Use `validate_design` (design-quality) to check design before handoff
+  - Use `validate_design` (design-quality) to check design QUALITY before handoff
+  - Use `validate_handoff_readiness` (this workflow) to check IMPLEMENTATION READINESS
   - Use `extract_design_specs` (design-quality) for single-component CSS
   - Use this workflow for complete multi-format handoff with state detection
   
@@ -18,10 +41,11 @@ workflow_instructions: |
   - Use `target: "context"` to reference previous tool results
   - Context persists within a session
   
-  ## Quick Start
+  ## Quick Start (Updated Workflow)
   
   For a complete design handoff, run these tools in sequence:
   
+  0. `validate_handoff_readiness` - **NEW!** Check for implementation pitfalls FIRST
   1. `analyze_design_context` - Understand the design structure
   2. `generate_design_tokens` - Extract colors, typography, spacing
   3. `detect_component_states` - Find visual variants (selected, hover, etc.)
@@ -34,7 +58,8 @@ workflow_instructions: |
   
   Run full workflow in order:
   ```
-  analyze_design_context → generate_design_tokens (format: "all") 
+  validate_handoff_readiness → analyze_design_context 
+  → generate_design_tokens (format: "all") 
   → detect_component_states → identify_external_assets 
   → generate_implementation_guide (framework: your-choice)
   ```
@@ -44,19 +69,63 @@ workflow_instructions: |
   Focus on specific elements:
   ```
   1. Select the component in Penpot
-  2. Run analyze_design_context (target: "selection")
-  3. Run generate_design_tokens (target: "selection")
-  4. Run detect_component_states (target: "selection")
+  2. Run validate_handoff_readiness (target: "selection") - Check for pitfalls
+  3. Run analyze_design_context (target: "selection")
+  4. Run generate_design_tokens (target: "selection")
+  5. Run detect_component_states (target: "selection")
   ```
   
   ### Scenario 3: Debugging Style Mismatch
   
   When implementation doesn't match design:
   ```
-  1. Run generate_design_tokens on the problem area
-  2. Compare extracted values with your implementation
-  3. Run detect_component_states to find missed states
+  1. Run validate_handoff_readiness to identify what was missed
+  2. Run generate_design_tokens on the problem area
+  3. Compare extracted values with your implementation
+  4. Run detect_component_states to find missed states
   ```
+  
+  ## Common Implementation Pitfalls (Detected by validate_handoff_readiness)
+  
+  ### Text Formatting Issues
+  
+  **Problem:** Design shows "WEEK 1" but implementation renders "Week 1"
+  
+  **Detection:** The tool detects uppercase patterns and flags them
+  
+  **Solution:** Use CSS `text-transform: uppercase` or JavaScript `.toUpperCase()`
+  
+  ### Date/Number Format Mismatches
+  
+  **Problem:** Design shows "01 Nov - 03 Nov" but implementation shows "Nov 1 - Nov 3"
+  
+  **Detection:** The tool identifies date and number format patterns
+  
+  **Solution:** Use consistent date/number formatters matching the detected patterns
+  
+  ### Status Badge Variations
+  
+  **Problem:** "Submitted" badge missing orange border, only has solid background
+  
+  **Detection:** The tool identifies all status variants and their styling differences
+  
+  **Solution:** Implement conditional CSS for each status state
+  
+  ### Fixed vs Flexible Dimensions
+  
+  **Problem:** Screen designed at 1100×760px but implementation is responsive
+  
+  **Detection:** The tool extracts key fixed dimensions (screen, sidebar, panel)
+  
+  **Solution:** Use the exact pixel values from the validation report
+  
+  ### Required Field Markers
+  
+  **Problem:** Form field shows "Project *" but implementation shows "Project"
+  
+  **Detection:** The tool finds all fields with required markers
+  
+  **Solution:** Include asterisks and implement validation for detected required fields
   
   ## Tool Overview
   
@@ -156,9 +225,20 @@ workflow_instructions: |
   
   ## Available Tools
   
+  ### validate_handoff_readiness ⭐ NEW - RUN FIRST!
+  Validates design readiness BEFORE implementation. Detects:
+  - Text format variations (uppercase, date patterns, number formats)
+  - Status/state variants (approved, submitted, draft, etc.)
+  - Dimension consistency and key fixed dimensions
+  - Interactive elements requiring event handlers
+  - Content patterns (required fields, icons, placeholders)
+  - Color token extraction summary
+  
+  **Generates an implementation checklist** to prevent common mismatches.
+  
   ### analyze_design_context
   Analyzes component hierarchy, layout patterns, and semantic structure.
-  Essential first step for any implementation.
+  Run after validation to understand what you're implementing.
   
   ### generate_design_tokens
   Extracts colors, typography, spacing, shadows into framework-ready formats.

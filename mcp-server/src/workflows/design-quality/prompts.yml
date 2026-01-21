@@ -129,6 +129,63 @@ workflow_instructions: |
   2. **Layout Groups** - Elements sharing layout behavior (row of buttons)
   3. **Section Groups** - Major page divisions (header, main, footer)
   
+  ## Button Sizing & Layout
+  
+  ### CRITICAL: Buttons in Layouts
+  
+  When sizing buttons or containers that are inside flex/grid layouts, **ALWAYS** use native flex sizing
+  instead of manual resize. Manual resize (`fitToContent`) changes the container's position, causing
+  buttons to drift from their intended layout position.
+  
+  ### Correct Approach: Use `flex-fit` or `button` Mode
+  
+  ```javascript
+  // For buttons, use auto_size_container with mode: "button"
+  // This applies flex fit-content sizing WITHOUT repositioning
+  // - Preserves position in parent layout
+  // - Sets proper button padding (8px vertical, 16px horizontal)
+  // - Ensures 44px minimum height for touch targets
+  ```
+  
+  ### Wrong Approach: Manual Resize
+  
+  ```javascript
+  // DON'T use fitToContent() or mode: "fit" for buttons in layouts
+  // This will change the button's x/y position, breaking layouts
+  penpotUtils.fitToContent(button);  // ❌ WRONG - causes position drift
+  ```
+  
+  ### Button Best Practices
+  
+  1. **Create button as Board** - Buttons should be boards (not rectangles) to support flex layout
+  2. **Use flex fit-content** - Set `horizontalSizing: "fit-content"` and `verticalSizing: "fit-content"`
+  3. **Proper padding** - Use flex padding (8px vertical, 16px horizontal typical)
+  4. **Center content** - Set `alignItems: "center"` and `justifyContent: "center"`
+  5. **Touch targets** - Ensure minimum 44x44px for accessibility
+  
+  ### Quick Button Setup
+  
+  ```javascript
+  // Method 1: Using the auto_size_container tool
+  // Call with: target: "selection", mode: "button"
+  
+  // Method 2: Using penpotUtils directly
+  penpotUtils.configureAsButton(buttonBoard, {
+      verticalPadding: 8,
+      horizontalPadding: 16,
+      minHeight: 44  // touch target
+  });
+  
+  // Method 3: Manual setup
+  button.addFlexLayout();
+  button.flex.horizontalSizing = 'fit-content';
+  button.flex.verticalSizing = 'fit-content';
+  button.flex.horizontalPadding = 16;
+  button.flex.verticalPadding = 8;
+  button.flex.alignItems = 'center';
+  button.flex.justifyContent = 'center';
+  ```
+  
   ## Common Design Issues & Solutions
   
   ### Issue: Content Clipping
@@ -294,13 +351,18 @@ workflow_instructions: |
   Critical when creating designs programmatically (appendChild adds to front).
   Use with `autoFix: true` to automatically reorder elements by priority.
   
-  ### auto_size_container ⭐ NEW
+  ### auto_size_container ⭐ ENHANCED
   Automatically resizes containers to fit their content with configurable padding.
   Modes:
-  - `fit`: Resize to exactly fit content (default)
-  - `fit-expand-only`: Only expand, never shrink
-  - `fit-shrink-only`: Only shrink, never expand
-  Great for fixing containers that are too small (clipping) or too large (wasted space).
+  - `fit`: Manual resize to exactly fit content (may change position)
+  - `fit-expand-only`: Only expand, never shrink (may change position)
+  - `fit-shrink-only`: Only shrink, never expand (may change position)
+  - `flex-fit`: **RECOMMENDED** - Native flex sizing (NO position change)
+  - `button`: Optimized for buttons (fit-content + proper padding + touch targets)
+  
+  **IMPORTANT:** For buttons and elements in layouts, use `flex-fit` or `button` mode
+  to avoid position drift. Manual modes (`fit`, `fit-expand-only`, `fit-shrink-only`)
+  will reposition the container.
   
   ### suggest_layout ⭐ NEW
   Analyzes a container's children and suggests optimal flex/grid configuration.

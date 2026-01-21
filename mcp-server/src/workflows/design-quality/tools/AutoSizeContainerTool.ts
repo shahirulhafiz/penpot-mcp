@@ -7,11 +7,17 @@ import { ExecuteCodePluginTask } from "../../core/tasks/ExecuteCodePluginTask.js
 /**
  * Automatically sizes containers to fit their content with optional padding.
  * Useful for fixing containers that are too small (causing clipping) or too large (wasted space).
+ *
+ * IMPORTANT: For buttons and elements in flex/grid layouts, use "flex-fit" mode which uses
+ * native Penpot flex sizing (horizontalSizing/verticalSizing = "fit-content"). This avoids
+ * position drift that occurs with manual resize modes.
  */
 export class AutoSizeContainerTool extends Tool<{
     target: string;
     mode?: string;
     padding?: number;
+    horizontalPadding?: number;
+    verticalPadding?: number;
     minWidth?: number;
     minHeight?: number;
     recursive?: boolean;
@@ -21,18 +27,29 @@ export class AutoSizeContainerTool extends Tool<{
             target: z.string().describe(
                 'Target container(s) to resize: "selection" for current selection, "page" for all boards on page, or a shape ID'
             ),
-            mode: z.enum(["fit", "fit-expand-only", "fit-shrink-only"]).optional().describe(
-                'Sizing mode: "fit" (resize to exactly fit content), "fit-expand-only" (only expand, never shrink), ' +
-                '"fit-shrink-only" (only shrink, never expand). Default: "fit"'
+            mode: z.enum(["fit", "fit-expand-only", "fit-shrink-only", "flex-fit", "button"]).optional().describe(
+                'Sizing mode:\n' +
+                '- "fit": Manually resize to exactly fit content (may change position)\n' +
+                '- "fit-expand-only": Only expand, never shrink (may change position)\n' +
+                '- "fit-shrink-only": Only shrink, never expand (may change position)\n' +
+                '- "flex-fit": Use native flex fit-content sizing (RECOMMENDED for layouts - no position change)\n' +
+                '- "button": Optimized for buttons with proper padding and touch target size\n' +
+                'Default: "fit". Use "flex-fit" or "button" for elements in flex/grid layouts to avoid position drift.'
             ),
             padding: z.number().optional().describe(
-                'Padding to add around content (in pixels). Default: 16'
+                'Uniform padding to add around content (in pixels). Default: 16 for fit modes, 8 for button mode'
+            ),
+            horizontalPadding: z.number().optional().describe(
+                'Horizontal padding (overrides uniform padding). Default for button mode: 16'
+            ),
+            verticalPadding: z.number().optional().describe(
+                'Vertical padding (overrides uniform padding). Default for button mode: 8'
             ),
             minWidth: z.number().optional().describe(
                 'Minimum width constraint (in pixels). Default: none'
             ),
             minHeight: z.number().optional().describe(
-                'Minimum height constraint (in pixels). Default: none'
+                'Minimum height constraint (in pixels). Default: 44 for button mode (touch target)'
             ),
             recursive: z.boolean().optional().describe(
                 'If true, recursively resize all nested containers. Default: false'
@@ -47,8 +64,8 @@ export class AutoSizeContainerTool extends Tool<{
     getToolDescription(): string {
         return (
             "Automatically resizes containers to fit their content with configurable padding. " +
-            "Modes: fit (exact fit), fit-expand-only (grow to fit), fit-shrink-only (shrink excess). " +
-            "Helps fix clipping issues and eliminate wasted whitespace."
+            "Modes: fit (manual resize), flex-fit (native flex sizing - BEST for layouts), button (optimized for buttons). " +
+            "IMPORTANT: Use 'flex-fit' or 'button' mode for elements in flex/grid layouts to avoid position drift."
         );
     }
 
@@ -56,14 +73,30 @@ export class AutoSizeContainerTool extends Tool<{
         target: string;
         mode?: string;
         padding?: number;
+        horizontalPadding?: number;
+        verticalPadding?: number;
         minWidth?: number;
         minHeight?: number;
         recursive?: boolean;
     }): Promise<ToolResponse> {
         const mode = args.mode || "fit";
-        const padding = args.padding ?? 16;
+        const isFlexMode = mode === "flex-fit" || mode === "button";
+
+        // Default padding based on mode
+        let defaultPadding = 16;
+        let defaultHPadding = args.horizontalPadding;
+        let defaultVPadding = args.verticalPadding;
+
+        if (mode === "button") {
+            defaultHPadding = args.horizontalPadding ?? 16;
+            defaultVPadding = args.verticalPadding ?? 8;
+        }
+
+        const padding = args.padding ?? defaultPadding;
+        const horizontalPadding = defaultHPadding ?? padding;
+        const verticalPadding = defaultVPadding ?? padding;
         const minWidth = args.minWidth;
-        const minHeight = args.minHeight;
+        const minHeight = mode === "button" ? (args.minHeight ?? 44) : args.minHeight; // Touch target default for buttons
         const recursive = args.recursive ?? false;
 
         const code = `
@@ -102,9 +135,12 @@ export class AutoSizeContainerTool extends Tool<{
 
             const mode = ${JSON.stringify(mode)};
             const padding = ${padding};
+            const horizontalPadding = ${horizontalPadding};
+            const verticalPadding = ${verticalPadding};
             const minWidth = ${minWidth !== undefined ? minWidth : 'undefined'};
             const minHeight = ${minHeight !== undefined ? minHeight : 'undefined'};
             const recursive = ${recursive};
+            const isFlexMode = mode === 'flex-fit' || mode === 'button';
 
             /**
              * Calculate the bounding box of all children
@@ -138,7 +174,86 @@ export class AutoSizeContainerTool extends Tool<{
             };
 
             /**
-             * Resize a container to fit its content
+             * Apply flex-based fit-content sizing to a container.
+             * This uses native Penpot flex layout sizing which doesn't reposition the container.
+             */
+            const applyFlexFit = (container) => {
+                // Check if container supports flex layout
+                if (!('addFlexLayout' in container)) {
+                    return {
+                        name: container.name,
+                        id: container.id,
+                        action: 'skipped',
+                        reason: 'Container does not support flex layout'
+                    };
+                }
+
+                const wasFlexAdded = !container.flex;
+
+                // Add flex layout if not present
+                if (!container.flex) {
+                    container.addFlexLayout();
+                }
+
+                const flex = container.flex;
+                if (!flex) {
+                    return {
+                        name: container.name,
+                        id: container.id,
+                        action: 'skipped',
+                        reason: 'Failed to add flex layout'
+                    };
+                }
+
+                const oldHSizing = flex.horizontalSizing;
+                const oldVSizing = flex.verticalSizing;
+                const oldHPadding = flex.horizontalPadding || 0;
+                const oldVPadding = flex.verticalPadding || 0;
+
+                // Set fit-content sizing
+                flex.horizontalSizing = 'fit-content';
+                flex.verticalSizing = 'fit-content';
+
+                // Set padding
+                flex.horizontalPadding = horizontalPadding;
+                flex.verticalPadding = verticalPadding;
+
+                // For button mode, center content
+                if (mode === 'button') {
+                    flex.alignItems = 'center';
+                    flex.justifyContent = 'center';
+                }
+
+                // Apply minimum size constraints (for touch targets)
+                if (minWidth !== undefined && container.width < minWidth) {
+                    container.resize(minWidth, container.height);
+                }
+                if (minHeight !== undefined && container.height < minHeight) {
+                    container.resize(container.width, minHeight);
+                }
+
+                return {
+                    name: container.name,
+                    id: container.id,
+                    action: 'flex-fit-applied',
+                    flexAdded: wasFlexAdded,
+                    old: {
+                        horizontalSizing: oldHSizing,
+                        verticalSizing: oldVSizing,
+                        horizontalPadding: oldHPadding,
+                        verticalPadding: oldVPadding
+                    },
+                    new: {
+                        horizontalSizing: flex.horizontalSizing,
+                        verticalSizing: flex.verticalSizing,
+                        horizontalPadding: horizontalPadding,
+                        verticalPadding: verticalPadding
+                    }
+                };
+            };
+
+            /**
+             * Resize a container to fit its content (manual mode - may reposition)
              */
             const resizeContainer = (container) => {
                 const bounds = getContentBounds(container);
@@ -250,7 +365,10 @@ export class AutoSizeContainerTool extends Tool<{
                 withDepth.sort((a, b) => b.depth - a.depth);
                 
                 withDepth.forEach(({ container }) => {
-                    const result = resizeContainer(container);
+                    // Use flex-based sizing for flex-fit and button modes
+                    const result = isFlexMode 
+                        ? applyFlexFit(container) 
+                        : resizeContainer(container);
                     results.push(result);
                     
                     // If recursive, also process nested containers
@@ -271,13 +389,17 @@ export class AutoSizeContainerTool extends Tool<{
 
             return {
                 mode: mode,
-                padding: padding,
+                isFlexMode: isFlexMode,
+                padding: isFlexMode ? undefined : padding,
+                horizontalPadding: isFlexMode ? horizontalPadding : undefined,
+                verticalPadding: isFlexMode ? verticalPadding : undefined,
                 minWidth: minWidth,
                 minHeight: minHeight,
                 recursive: recursive,
                 containersProcessed: results.length,
                 summary: {
                     resized: results.filter(r => r.action === 'resized').length,
+                    flexFitApplied: results.filter(r => r.action === 'flex-fit-applied').length,
                     noChange: results.filter(r => r.action === 'no-change').length,
                     skipped: results.filter(r => r.action === 'skipped').length
                 },
@@ -295,20 +417,50 @@ export class AutoSizeContainerTool extends Tool<{
 
         // Format the results
         let output = `# Auto-Size Container Results\n\n`;
-        output += `**Mode:** ${result.mode}\n`;
-        output += `**Padding:** ${result.padding}px\n`;
+        output += `**Mode:** ${result.mode}`;
+        if (result.isFlexMode) {
+            output += ` (native flex sizing - position preserved)\n`;
+        } else {
+            output += ` (manual resize - may change position)\n`;
+        }
+
+        if (result.isFlexMode) {
+            output += `**Horizontal Padding:** ${result.horizontalPadding}px\n`;
+            output += `**Vertical Padding:** ${result.verticalPadding}px\n`;
+        } else {
+            output += `**Padding:** ${result.padding}px\n`;
+        }
         if (result.minWidth) output += `**Min Width:** ${result.minWidth}px\n`;
         if (result.minHeight) output += `**Min Height:** ${result.minHeight}px\n`;
         output += `**Recursive:** ${result.recursive}\n\n`;
 
         output += `## Summary\n\n`;
         output += `- **Containers processed:** ${result.containersProcessed}\n`;
-        output += `- **Resized:** ${result.summary.resized}\n`;
+        if (result.isFlexMode) {
+            output += `- **Flex fit-content applied:** ${result.summary.flexFitApplied}\n`;
+        } else {
+            output += `- **Resized:** ${result.summary.resized}\n`;
+        }
         output += `- **No change needed:** ${result.summary.noChange}\n`;
         output += `- **Skipped:** ${result.summary.skipped}\n\n`;
 
-        if (result.summary.resized === 0 && result.summary.noChange > 0) {
+        const successCount = result.isFlexMode ? result.summary.flexFitApplied : result.summary.resized;
+
+        if (successCount === 0 && result.summary.noChange > 0) {
             output += `✅ **All containers already at optimal size!**\n`;
+        } else if (result.isFlexMode && result.summary.flexFitApplied > 0) {
+            output += `## Flex Fit-Content Applied\n\n`;
+            const applied = result.results.filter((r: any) => r.action === 'flex-fit-applied');
+            applied.forEach((r: any) => {
+                output += `### ${r.name}\n`;
+                if (r.flexAdded) {
+                    output += `- **Flex layout added:** Yes\n`;
+                }
+                output += `- **Sizing:** horizontal=${r.new.horizontalSizing}, vertical=${r.new.verticalSizing}\n`;
+                output += `- **Padding:** ${r.new.horizontalPadding}px horizontal, ${r.new.verticalPadding}px vertical\n\n`;
+            });
+            output += `✅ **${result.summary.flexFitApplied} container(s) configured with flex fit-content!**\n`;
+            output += `\n💡 **Note:** Position is preserved. The container will automatically resize to fit its content.\n`;
         } else if (result.summary.resized > 0) {
             output += `## Resized Containers\n\n`;
             const resized = result.results.filter((r: any) => r.action === 'resized');
@@ -319,6 +471,7 @@ export class AutoSizeContainerTool extends Tool<{
                 output += `- **Delta:** ${r.delta.width > 0 ? '+' : ''}${r.delta.width}w, ${r.delta.height > 0 ? '+' : ''}${r.delta.height}h\n\n`;
             });
             output += `✅ **${result.summary.resized} container(s) resized to fit content!**\n`;
+            output += `\n⚠️ **Note:** Manual resize mode may change container positions. For elements in layouts, consider using "flex-fit" or "button" mode.\n`;
         }
 
         if (result.summary.skipped > 0) {
